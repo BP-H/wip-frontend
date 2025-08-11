@@ -3,18 +3,16 @@
 
 import React from 'react';
 import dynamic from 'next/dynamic';
-import Image from 'next/image';
 import ReactionBar from './ReactionBar';
 import styles from './postcard.module.css';
 import type { Post } from '@/lib/feed';
 
-// Extend the feed type minimally to tolerate partial data + optional fields we use here
+// Tolerate partial data + optional fields specific to this card
 type CardPost = Partial<Post> & {
   alt?: string;
   reactions?: Record<string, number>;
 };
 
-// Client-only tiny 3D tile for `type === "three"`
 const Mini3D = dynamic(() => import('./Mini3D'), {
   ssr: false,
   loading: () => <div className="min3d-skeleton" aria-label="Loading 3D…" />,
@@ -42,12 +40,13 @@ export default function PostCard({
     <article className={styles.card}>
       <header className={styles.header}>
         {post.author?.avatar ? (
-          <Image
+          // Use <img> to avoid Next/Image domain config; avatar is decorative
+          <img
             className={styles.avatar}
             src={post.author.avatar}
             alt=""
-            width={40}
-            height={40}
+            loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className={styles.avatar} aria-hidden />
@@ -56,7 +55,7 @@ export default function PostCard({
           <div className={styles.name}>{post.author?.name ?? 'anon'}</div>
           <div className={styles.meta}>
             @{post.author?.handle ?? 'unknown'} ·{' '}
-            {post.createdAt ? new Date(post.createdAt).toLocaleString() : 'just now'}
+            {post.createdAt ? new Date(post.createdAt as any).toLocaleString() : 'just now'}
           </div>
         </div>
       </header>
@@ -65,13 +64,12 @@ export default function PostCard({
         {post.text ? <p className={styles.text}>{post.text}</p> : null}
 
         {post.type === 'image' && post.image ? (
-          <Image
+          <img
             src={post.image}
             alt={imgAlt}
             className={styles.media}
             loading="lazy"
-            width={800}
-            height={533}
+            decoding="async"
           />
         ) : null}
 

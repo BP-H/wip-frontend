@@ -1,7 +1,9 @@
 'use client';
 
-import { Canvas } from '@react-three/fiber';
+import dynamic from 'next/dynamic';
 import { OrbitControls, Float } from '@react-three/drei';
+
+const Canvas = dynamic(() => import('@react-three/fiber').then(m => m.Canvas), { ssr: false });
 
 export default function Page3D() {
   return (

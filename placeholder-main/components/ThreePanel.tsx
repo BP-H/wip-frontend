@@ -1,9 +1,14 @@
 // components/ThreePanel.tsx
 "use client";
 
-import React, { useState } from "react";
-import { Canvas } from "@react-three/fiber";
-import Mini3D from "./Mini3D";
+import { useState } from "react";
+import dynamic from "next/dynamic";
+
+const Canvas = dynamic(() => import("@react-three/fiber").then((m) => m.Canvas), {
+  ssr: false,
+});
+
+const Mini3D = dynamic(() => import("./Mini3D"), { ssr: false });
 
 type Props = {
   seed?: string;

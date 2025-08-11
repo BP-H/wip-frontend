@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import styles from './reactionbar.module.css';
 
 type ReactionCounts = Record<string, number>;
 
@@ -66,43 +67,13 @@ export default function ReactionBar({
             aria-pressed={active}
             title={`${emoji} ${n}`}
             onClick={() => handleClick(emoji)}
-            className={`rxn ${active ? 'active' : ''}`}
+            className={`${styles.rxn} ${active ? styles.active : ''}`}
           >
-            <span className="emoji" aria-hidden="true">{emoji}</span>
-            <span className="count">{n}</span>
+            <span className={styles.emoji} aria-hidden="true">{emoji}</span>
+            <span className={styles.count}>{n}</span>
           </button>
         );
       })}
-
-      {/* Local styles so the component works even without external CSS */}
-      <style jsx>{`
-        .rxn {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          height: 32px;
-          padding: 0 10px;
-          margin-right: 8px;
-          border-radius: 999px;
-          border: 1px solid var(--sn-stroke, #223);
-          background: #0f1626;
-          color: var(--sn-muted, #9aa6c1);
-          font-size: 13px;
-          line-height: 1;
-          transition: box-shadow .18s ease, border-color .18s ease, color .18s;
-        }
-        .rxn:hover {
-          border-color: #2a3754;
-          box-shadow: 0 0 0 2px var(--sn-ring, rgba(255,45,184,.35)) inset;
-        }
-        .rxn.active {
-          color: #fff;
-          border-color: #323f5e;
-          box-shadow: 0 0 0 2px var(--sn-ring, rgba(255,45,184,.35)) inset;
-        }
-        .emoji { font-size: 16px; }
-        .count { opacity: .9; }
-      `}</style>
     </div>
   );
 }
