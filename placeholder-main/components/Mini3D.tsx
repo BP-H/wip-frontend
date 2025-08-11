@@ -1,30 +1,25 @@
+// placeholder-main/components/Mini3D.tsx
 'use client';
 
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Float, OrbitControls } from '@react-three/drei';
+import { OrbitControls } from '@react-three/drei';
 import type { Group } from 'three';
 
-/** ─────────────────────────────────────────────────────────────────────────────
- *  Mini3D v2 — “Aespa-Whiplash” microverse
- *  - Multi-geometry swarm (icosa / dodeca / torusKnot / octa / spheres)
- *  - Seeded RNG for deterministic vibes per seed
- *  - Pop-in / hold / pop-out life cycles (looped)
- *  - Pink/Blue/White palette ~ 80 / 15 / 5
- *  - Mobile-first sizing + light on GPU (no postprocessing needed)
- *  - No SSR; import client-only via dynamic() in page.tsx
- *  ─────────────────────────────────────────────────────────────────────────── */
+/* ------------------------------------------------------------------ */
+/* Stable, low-risk 3D hero                                           */
+/*  - No external effects (Stars/Sparkles) to avoid runtime flakes    */
+/*  - Deterministic RNG by seed                                       */
+/*  - Error boundary + fallback so you never see a blank tile         */
+/* ------------------------------------------------------------------ */
 
 type Props = {
   seed?: string | number;
-  /** 0..1 – sets count & subtle energy. Good pipe for global validity. */
-  density?: number;
   autoRotate?: boolean;
   wireframe?: boolean;
-  opacity?: number;
+  opacity?: number; // 0..1
+  height?: number;  // px
 };
-
-type ShapeKind = 'ico' | 'dode' | 'oct' | 'sphere' | 'knot';
 
 function hashSeed(s: string): number {
   let h = 2166136261 >>> 0;
@@ -40,168 +35,162 @@ const mulberry32 = (a: number) => () => {
   t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 };
-const clamp = (n: number, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, n));
-const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 
-function pickKind(r: () => number): ShapeKind {
-  // Slight bias toward polyhedra; torusKnot rarer for spice.
-  const x = r();
-  if (x < 0.26) return 'ico';
-  if (x < 0.52) return 'dode';
-  if (x < 0.78) return 'oct';
-  if (x < 0.95) return 'sphere';
-  return 'knot';
-}
+const PALETTE = ['#ffffff', '#ff2f92', '#0ea5ff'] as const;
 
-function pickColor(r: () => number): string {
-  // ~80% hot pink, 15% electric blue, 5% pure white
-  const x = r();
-  if (x < 0.80) return '#ff1fae';        // hot pink
-  if (x < 0.95) return '#70b5ff';        // blue accent
-  return '#ffffff';                       // white highlight
-}
-
-type SwarmCfg = {
-  kind: ShapeKind;
-  color: string;
-  pos: [number, number, number];
-  rot: [number, number, number];
-  baseScale: number;
-  ttl: number;    // lifetime seconds
-  delay: number;  // phase offset seconds
-};
-
-function makeSwarm(seedStr: string, count: number): SwarmCfg[] {
-  const rng = mulberry32(hashSeed(seedStr));
-  const out: SwarmCfg[] = [];
-  for (let i = 0; i < count; i++) {
-    const radius = 0.8 + rng() * 2.6;           // radial distance
-    const theta = rng() * Math.PI * 2;
-    const y = (rng() - 0.5) * 1.4;              // vertical spread
-    const pos: [number, number, number] = [
-      Math.cos(theta) * radius,
-      y,
-      Math.sin(theta) * radius * (rng() > 0.5 ? 1 : -1) - (rng() * 0.6),
-    ];
-    const rot: [number, number, number] = [
-      (rng() * 0.6 + 0.1) * (rng() > 0.5 ? 1 : -1),
-      (rng() * 0.8 + 0.1) * (rng() > 0.5 ? 1 : -1),
-      (rng() * 0.4) * (rng() > 0.5 ? 1 : -1),
-    ];
-    const baseScale = 0.28 + rng() * 0.75;      // size variety
-    const ttl = 3.4 + rng() * 3.2;              // life window
-    const delay = rng() * 10;                    // stagger
-    out.push({
-      kind: pickKind(rng),
-      color: pickColor(rng),
-      pos,
-      rot,
-      baseScale,
-      ttl,
-      delay,
-    });
-  }
-  return out;
-}
-
-function Shape({
-  cfg,
+function Shard({
+  idx,
+  rng,
   wireframe,
   opacity,
   rotate,
 }: {
-  cfg: SwarmCfg;
+  idx: number;
+  rng: () => number;
   wireframe: boolean;
   opacity: number;
   rotate: boolean;
 }) {
   const ref = useRef<Group>(null!);
 
+  // deterministic-ish params
+  const size = useMemo(() => 0.7 + rng() * 0.9, [rng]);
+  const pos = useMemo<[number, number, number]>(
+    () => [rng() * 4 - 2, -0.2 + rng() * 0.4, -(rng() * 2 + idx * 0.07)],
+    [rng, idx]
+  );
+  const rot = useMemo(
+    () => ({ x: 0.3 + rng() * 0.6, y: 0.6 + rng() * 0.9, z: 0.15 + rng() * 0.5 }),
+    [rng]
+  );
+  const hue = useMemo(() => PALETTE[Math.floor(rng() * PALETTE.length)], [rng]);
+  const pulse = useMemo(() => 0.9 + rng() * 1.2, [rng]);
+
   useFrame(({ clock }, dt) => {
-    const t = clock.getElapsedTime();
-    const life = (t + cfg.delay) % cfg.ttl;
-    const u = life / cfg.ttl;
-
-    // pop-in (0..0.18), hold (..0.82), pop-out (..1)
-    let s = cfg.baseScale;
-    if (u < 0.18) s *= easeInOut(u / 0.18);
-    else if (u > 0.82) s *= 1 - easeInOut((u - 0.82) / 0.18);
-
-    const bob = Math.sin((t * 0.9) + cfg.pos[0] * 0.5) * 0.06;
-    ref.current.position.set(cfg.pos[0], cfg.pos[1] + bob, cfg.pos[2]);
-    ref.current.scale.setScalar(s);
+    const t = clock.getElapsedTime() * pulse + idx * 0.3;
 
     if (rotate) {
-      ref.current.rotation.x += cfg.rot[0] * dt;
-      ref.current.rotation.y += cfg.rot[1] * dt;
-      ref.current.rotation.z += cfg.rot[2] * dt;
+      ref.current.rotation.y += rot.y * dt;
+      ref.current.rotation.x += rot.x * 0.35 * dt;
+      ref.current.rotation.z += rot.z * 0.25 * dt;
     }
+
+    // sin^2 pop 0→1→0
+    const s = Math.pow(Math.max(0, Math.sin(t)), 2);
+    ref.current.scale.setScalar(0.25 + s * 1.2);
+
+    // subtle vertical bob
+    ref.current.position.y = pos[1] + Math.sin(t * 0.6 + idx) * 0.14;
   });
 
   return (
-    <group ref={ref}>
+    <group ref={ref} position={pos}>
       <mesh>
-        {cfg.kind === 'ico' && <icosahedronGeometry args={[1, 0]} />}
-        {cfg.kind === 'dode' && <dodecahedronGeometry args={[1, 0]} />}
-        {cfg.kind === 'oct' && <octahedronGeometry args={[1, 0]} />}
-        {cfg.kind === 'sphere' && <sphereGeometry args={[1, 18, 18]} />}
-        {cfg.kind === 'knot' && <torusKnotGeometry args={[0.6, 0.18, 90, 14]} />}
+        {/* icosahedron keeps it crisp on mobile GPUs */}
+        <icosahedronGeometry args={[size, 0]} />
         <meshStandardMaterial
-          color={cfg.color}
-          wireframe={wireframe}
-          metalness={0.2}
-          roughness={0.35}
-          emissive={cfg.color}
-          emissiveIntensity={cfg.color === '#ffffff' ? 0.1 : 0.35}
+          color={hue}
+          wireframe={wireframe && hue === '#ffffff'}
           transparent
           opacity={opacity}
+          metalness={0.25}
+          roughness={0.55}
         />
       </mesh>
     </group>
   );
 }
 
+/** Tiny error boundary so we never show a blank panel */
+class Boundary extends React.Component<
+  { children: React.ReactNode },
+  { err?: Error }
+> {
+  state = { err: undefined as Error | undefined };
+  static getDerivedStateFromError(err: Error) { return { err }; }
+  render() {
+    if (this.state.err) {
+      return (
+        <div
+          style={{
+            height: 260,
+            borderRadius: 16,
+            border: '1px solid rgba(255,255,255,.08)',
+            background:
+              'linear-gradient(180deg,#0c0f16,#0a0d14) radial-gradient(120% 120% at 20% 10%, rgba(255,47,146,.18), transparent 60%)',
+            display: 'grid',
+            placeItems: 'center',
+            color: '#b6c3d6',
+            fontWeight: 800,
+          }}
+        >
+          3D unavailable
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function Mini3D({
   seed = 'sn2177',
-  density = 0.6,
   autoRotate = true,
-  wireframe = false,
-  opacity = 0.88,
+  wireframe = true,
+  opacity = 0.85,
+  height = 260,
 }: Props) {
-  const s = String(seed);
-  const d = clamp(density, 0, 1);
-  // Mobile-first: fewer shapes on tiny screens, more on desktop, scaled by density.
-  const baseCount = typeof window !== 'undefined' && window.innerWidth < 560 ? 12 : 22;
-  const count = Math.round(baseCount + d * (baseCount * 0.9));
-  const swarm = useMemo(() => makeSwarm(s, count), [s, count]);
+  const rng = useMemo(() => mulberry32(hashSeed(String(seed))), [seed]);
+  const shards = useMemo(() => Array.from({ length: 18 }, (_, i) => i), []);
 
   return (
     <div
       style={{
-        height: 'clamp(240px, 40vh, 380px)',
+        height,
         borderRadius: 16,
         overflow: 'hidden',
-        border: '1px solid rgba(255,255,255,.08)',
-        background: 'linear-gradient(180deg,#0b0c12,#090a0f)',
+        border: '1px solid rgba(255,255,255,.06)',
+        background: 'linear-gradient(180deg,#111320,#0b0c12)',
       }}
-      aria-label="Mini 3D universe"
     >
-      <Canvas dpr={[1, 2]} camera={{ position: [0, 0, 6.5], fov: 46 }}>
-        {/* depth & ambient */}
-        <color attach="background" args={['#0b0c12']} />
-        <fog attach="fog" args={['#0b0c12', 6, 18]} />
-        <ambientLight intensity={0.9} />
-        <directionalLight position={[4, 4, 6]} intensity={0.9} />
-        <directionalLight position={[-3, -2, -5]} intensity={0.6} />
+      <Boundary>
+        <Suspense
+          fallback={
+            <div style={{ height: '100%', width: '100%' }} aria-label="Loading 3D…" />
+          }
+        >
+          <Canvas
+            dpr={[1, 2]}
+            camera={{ position: [0, 0.35, 6.5], fov: 45 }}
+            gl={{
+              antialias: true,
+              powerPreference: 'high-performance',
+              preserveDrawingBuffer: true,
+            }}
+            onCreated={({ gl }) => {
+              gl.setClearColor('#0e1119');
+            }}
+          >
+            {/* lighting */}
+            <ambientLight intensity={0.9} />
+            <directionalLight position={[2.8, 2.2, 4]} intensity={0.95} />
+            <pointLight position={[-3, -2, -4]} intensity={0.35} color="#ff2f92" />
+            <pointLight position={[3, -1, -3]} intensity={0.25} color="#0ea5ff" />
 
-        <Float speed={1.15} rotationIntensity={0.45} floatIntensity={0.5}>
-          {swarm.map((cfg, i) => (
-            <Shape key={i} cfg={cfg} wireframe={wireframe} opacity={opacity} rotate={autoRotate} />
-          ))}
-        </Float>
+            {shards.map((i) => (
+              <Shard
+                key={i}
+                idx={i}
+                rng={rng}
+                wireframe={wireframe}
+                opacity={opacity}
+                rotate={autoRotate}
+              />
+            ))}
 
-        <OrbitControls enablePan={false} enableZoom={false} enableRotate />
-      </Canvas>
+            <OrbitControls enablePan={false} enableZoom={false} enableRotate={autoRotate} />
+          </Canvas>
+        </Suspense>
+      </Boundary>
     </div>
   );
 }
