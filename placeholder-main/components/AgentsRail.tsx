@@ -17,13 +17,13 @@ export default function AgentsRail() {
   const [agents, setAgents] = useState<Agent[]>([]);
 
   useEffect(() => {
-    let mounted = true;
+    const controller = new AbortController();
     (async () => {
       try {
-        const data = await api.listAgents();
-        if (mounted) setAgents(data);
+        const data = await api.listAgents(controller.signal);
+        if (!controller.signal.aborted) setAgents(data);
       } catch {
-        if (mounted)
+        if (!controller.signal.aborted)
           setAgents([
             { id: "a1", handle: "nova_ai", display_name: "Nova AI", resonance: 98 },
             { id: "a2", handle: "karina", display_name: "Karina", resonance: 91 },
@@ -32,7 +32,9 @@ export default function AgentsRail() {
           ]);
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   if (!agents.length) return null;
@@ -49,7 +51,7 @@ export default function AgentsRail() {
             </div>
           </header>
           <div className={styles.stat}>resonance: {a.resonance ?? "—"}</div>
-          <button className="sn-btn">Chat</button>
+          <button type="button" className="sn-btn">Chat</button>
         </article>
       ))}
     </div>

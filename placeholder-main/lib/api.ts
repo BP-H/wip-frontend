@@ -1,24 +1,64 @@
 // lib/api.ts
-const BASE = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000';
+const BASE = (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000').replace(/\/+$/, '');
 
-export async function getStatus() {
-  const r = await fetch(`${BASE}/status`, { cache: 'no-store' });
-  if (!r.ok) throw new Error('status failed');
-  return r.json();
+export class ApiError extends Error {
+  readonly status: number;
+  readonly url: string;
+  readonly body?: string;
+
+  constructor(url: string, status: number, statusText: string, body?: string) {
+    super(`${url} failed: ${status} ${statusText}${body ? ` - ${body}` : ''}`);
+    this.name = 'ApiError';
+    this.status = status;
+    this.url = url;
+    this.body = body;
+  }
 }
 
-export async function getEntropy() {
-  const r = await fetch(`${BASE}/system/collective-entropy`, { cache: 'no-store' });
-  if (!r.ok) throw new Error('entropy failed');
-  return r.json();
+async function request<T = any>(path: string, init: RequestInit = {}): Promise<T> {
+  const url = `${BASE}${path.startsWith('/') ? '' : '/'}${path}`;
+  let res: Response;
+
+  try {
+    res = await fetch(url, { cache: 'no-store', ...init });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`${url} request failed: ${msg}`);
+  }
+
+  if (!res.ok) {
+    let body: string | undefined;
+    try {
+      body = await res.text();
+    } catch {
+      // ignore body read errors
+    }
+    throw new ApiError(url, res.status, res.statusText, body);
+  }
+
+  // Expect JSON responses from our backend
+  return res.json() as Promise<T>;
 }
 
-export async function aiAssist(vibenodeId: number, prompt: string, token: string) {
-  const r = await fetch(`${BASE}/ai-assist/${vibenodeId}`, {
+/** GET /status */
+export function getStatus(signal?: AbortSignal) {
+  return request('/status', { signal });
+}
+
+/** GET /system/collective-entropy */
+export function getEntropy(signal?: AbortSignal) {
+  return request('/system/collective-entropy', { signal });
+}
+
+/** POST /ai-assist/:vibenodeId */
+export function aiAssist(vibenodeId: number, prompt: string, token: string, signal?: AbortSignal) {
+  return request(`/ai-assist/${vibenodeId}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify({ prompt }),
+    signal,
   });
-  if (!r.ok) throw new Error('ai-assist failed');
-  return r.json();
 }

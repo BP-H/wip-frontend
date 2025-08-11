@@ -33,16 +33,16 @@ export default function ReactionBar({
     const safe: ReactionCounts = { ...DEFAULTS };
     for (const [k, v] of Object.entries(counts || {})) {
       // Accept numeric values or numeric strings from APIs; anything
-      // non-numeric falls back to 0 so the UI stays stable.
+      // non-numeric falls back to 0 so the UI stays stable. Clamp at 0.
       const num = Number(v);
-      safe[k] = Number.isFinite(num) ? num : 0;
+      safe[k] = Number.isFinite(num) ? Math.max(0, num) : 0;
     }
     return safe;
   }, [counts]);
 
   const handleClick = (next: string) => {
     const prev = selected;
-    const newVal = prev === next ? null : next;
+    const newVal = prev === next ? null : next; // clicking active clears selection
     setSelected(newVal);
     try {
       onChange?.(prev, newVal);
