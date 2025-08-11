@@ -1,3 +1,4 @@
+// app/page.tsx
 'use client';
 
 import { useState } from 'react';
@@ -16,8 +17,8 @@ export default function Page() {
 
   return (
     <main className="root">
-      {/* TOPBAR (always sticky) */}
-      <header className="topbar" role="banner">
+      {/* TOPBAR (fixed; PortalHero reads its height via [data-app-header]) */}
+      <header className="topbar" role="banner" data-app-header>
         <div className="leftCluster">
           <button
             className="iconBtn showMobile"
@@ -59,6 +60,9 @@ export default function Page() {
           )}
         </div>
       </header>
+
+      {/* Spacer so fixed header doesn’t cover content */}
+      <div className="topbarSpacer" aria-hidden />
 
       {/* MOBILE DRAWER */}
       {drawerOpen && <div className="scrim" onClick={() => setDrawerOpen(false)} />}
@@ -118,7 +122,7 @@ export default function Page() {
 
         {/* CENTER */}
         <section className="center">
-          {/* The portal is itself sticky (inside it we scale a child). */}
+          {/* Sticky portal hero (PortalHero handles sticky math + perf) */}
           <div className="card heroIntro">
             <PortalHero />
             <p className="muted heroCopy">
@@ -177,13 +181,13 @@ export default function Page() {
       {/* THEME */}
       <style jsx global>{`
         :root {
-          --bg: #fafafc;     /* weathered white */
-          --panel: #ffffff;  /* cards/panels */
-          --ink: #111827;    /* dark text */
-          --muted: #6b7280;  /* secondary */
-          --stroke: #e5e7eb; /* borders */
-          --pink: #ff2db8;   /* 15% accent */
-          --blue: #4f46e5;   /* 5% accent */
+          --bg: #fafafc;
+          --panel: #ffffff;
+          --ink: #111827;
+          --muted: #6b7280;
+          --stroke: #e5e7eb;
+          --pink: #ff2db8;
+          --blue: #4f46e5;
         }
         html, body { background: var(--bg); color: var(--ink); }
         * { box-sizing: border-box; }
@@ -193,23 +197,26 @@ export default function Page() {
       <style jsx>{`
         .root { min-height: 100vh; }
 
+        /* FIXED header (always above portal/feed) */
         .topbar{
-          position: sticky; top: 0; z-index: 80;
+          position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
           display: grid; grid-template-columns: 1fr minmax(320px, 740px) 1fr;
           gap: 16px; align-items: center;
           height: 64px; padding: 12px 16px;
           border-bottom: 1px solid var(--stroke);
           background: rgba(255,255,255,.9); backdrop-filter: blur(8px);
         }
+        .topbarSpacer{ height: 64px; } /* match header height */
+
         .leftCluster{ display:flex; align-items:center; gap:10px; }
         .brand{ display:inline-flex; align-items:center; gap:10px; font-weight:800; color:var(--ink); text-decoration:none; }
         .logo{ border-radius:8px; }
         .iconBtn{ height:40px; min-width:40px; border-radius:12px; border:1px solid var(--stroke); background:var(--panel); }
         .search{ background:var(--panel); border:1px solid var(--stroke); border-radius:12px; height:40px; display:flex; align-items:center; padding:0 12px; }
         .search input{ flex:1; height:100%; background:transparent; border:0; outline:0; color:var(--ink); font-size:14px; }
-        .actions{ display:flex; justify-content:flex-end; align-items:center; gap:10px; }
+        .actions{ display:flex; justify-content:flex-end; align-items:center; gap:10px; position: relative; }
         .avatarBtn{ height:40px; width:40px; border-radius:12px; border:1px solid var(--stroke); background:var(--panel); display:grid; place-items:center; }
-        .avatarMenu{ position:absolute; margin-top:48px; right:16px; background:var(--panel); border:1px solid var(--stroke); border-radius:12px; padding:8px; display:grid; gap:6px; }
+        .avatarMenu{ position:absolute; top:48px; right:0; background:var(--panel); border:1px solid var(--stroke); border-radius:12px; padding:8px; display:grid; gap:6px; }
         .avatarMenu a{ color:var(--ink); text-decoration:none; padding:8px 10px; border-radius:8px; }
         .avatarMenu a:hover{ background:#f6f7fb; }
 
@@ -256,11 +263,11 @@ export default function Page() {
           .topbar{ grid-template-columns:auto 1fr auto; }
           .showMobile{ display:inline-flex; }
           .scrim{
-            position: fixed; inset: 0; background: rgba(0,0,0,.24); z-index: 60;
+            position: fixed; inset: 0; background: rgba(0,0,0,.24); z-index: 900;
             animation: fadeIn .15s ease-out;
           }
           .drawer{
-            position: fixed; inset: 0 20% 0 0; z-index: 61; background: var(--panel);
+            position: fixed; inset: 64px 20% 0 0; z-index: 950; background: var(--panel);
             border-right: 1px solid var(--stroke); padding: 16px; overflow-y: auto;
             transform: translateX(-100%); transition: transform .18s ease-out;
           }
