@@ -39,13 +39,17 @@ export function RemixMenu({
   }
   function close() {
     setOpen(false);
-    try { onClose?.(); } catch {}
+    try { onClose?.(); } catch (err) {
+      console.error(err);
+    }
   }
   function runRemix() {
     try {
       if (onRemix) onRemix();
       else if (onCreate) onCreate();
-    } catch {}
+    } catch (err) {
+      console.error(err);
+    }
     close();
   }
 

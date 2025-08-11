@@ -62,6 +62,7 @@ export default function Page() {
 
   // measure header height → CSS var so sticky math is exact
   useEffect(() => {
+    if (typeof ResizeObserver === 'undefined') return;
     const header = document.querySelector<HTMLElement>('header.topbar');
     if (!header) return;
     const set = () =>
