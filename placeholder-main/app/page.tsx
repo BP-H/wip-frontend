@@ -4,6 +4,11 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import InfiniteFeed from '@/components/InfiniteFeed';
+import dynamic from 'next/dynamic';
+const PortalHero = dynamic(() => import('@/components/PortalHero'), { ssr: false });
+
+// …inside your JSX, above the posts list:
+<PortalHero />
 
 function NavButton({ label }: { label: string }) {
   return <button className="btn">{label}</button>;
