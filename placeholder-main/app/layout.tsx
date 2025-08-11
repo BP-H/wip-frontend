@@ -1,25 +1,25 @@
-// app/layout.tsx
-import type { Metadata } from "next";
-import "./globals.css";
+import type { Metadata, Viewport } from 'next/document';
+import './globals.css'; // keep if you have it; otherwise remove this line
 
 export const metadata: Metadata = {
-  title: "superNova_2177",
-  description: "Matte‑white, angular, next‑level SNS prototype.",
-  themeColor: "#ffffff",
-  icons: {
-    icon: "/icon.png",          // Next.js will serve from /app or /public
-    shortcut: "/favicon.ico",
-    apple: "/apple-icon.png",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://sn2177.com'),
+  title: {
+    default: 'superNova_2177',
+    template: '%s · superNova_2177',
   },
+  description: 'Minimal social UI with a 3D portal hero.',
+};
+
+export const viewport: Viewport = {
+  themeColor: '#ffffff',
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      {/* we force light; CSS already ignores dark mode */}
-      <body>
-        <main>{children}</main>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
