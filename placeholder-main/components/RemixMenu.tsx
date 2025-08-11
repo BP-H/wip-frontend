@@ -1,7 +1,7 @@
 // components/RemixMenu.tsx
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 
 export type RemixMenuProps = {
   /** Called when the user confirms “Create remix”. */
@@ -33,17 +33,29 @@ export function RemixMenu({
   label = "Remix",
 }: RemixMenuProps) {
   const [open, setOpen] = useState(false);
-  const wrapperRef = useRef<HTMLDivElement>(null);
 
-  function toggle() {
-    setOpen(v => !v);
-  }
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const menuId = useId();
+  const headingId = useId();
+
   function close() {
     setOpen(false);
-    try { onClose?.(); } catch (err) {
+    // return focus to trigger after DOM updates
+    setTimeout(() => triggerRef.current?.focus(), 0);
+    try {
+      onClose?.();
+    } catch (err) {
       console.error(err);
     }
   }
+
+  function toggle() {
+    setOpen((v) => !v);
+  }
+
   function runRemix() {
     try {
       if (onRemix) onRemix();
@@ -54,28 +66,89 @@ export function RemixMenu({
     close();
   }
 
+  // Global listeners only while open
   useEffect(() => {
     if (!open) return;
 
-    function handleKeydown(e: KeyboardEvent) {
-      if (e.key === "Escape") close();
-    }
-
-    function handleMousedown(e: MouseEvent) {
-      const wrapper = wrapperRef.current;
-      if (wrapper && !wrapper.contains(e.target as Node)) {
+    const onPointerDown = (e: PointerEvent) => {
+      const wrap = wrapperRef.current;
+      if (wrap && !wrap.contains(e.target as Node)) {
         close();
       }
-    }
+    };
 
-    document.addEventListener("keydown", handleKeydown);
-    document.addEventListener("mousedown", handleMousedown);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        close();
+      }
+    };
+
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
 
     return () => {
-      document.removeEventListener("keydown", handleKeydown);
-      document.removeEventListener("mousedown", handleMousedown);
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
     };
   }, [open]);
+
+  // Focus first item when opened
+  useEffect(() => {
+    if (!open) return;
+    const menu = menuRef.current;
+    if (!menu) return;
+    const items = menu.querySelectorAll<HTMLElement>(
+      'button,[href],[tabindex]:not([tabindex="-1"])'
+    );
+    (items[0] ?? menu).focus();
+  }, [open]);
+
+  // Keyboard nav within menu (ArrowUp/Down, Tab trap)
+  const onMenuKeyDown: React.KeyboardEventHandler<HTMLDivElement> = (e) => {
+    const menu = menuRef.current;
+    if (!menu) return;
+
+    const items = Array.from(
+      menu.querySelectorAll<HTMLElement>('button,[href],[tabindex]:not([tabindex="-1"])')
+    ).filter((el) => !el.hasAttribute("disabled"));
+
+    if (items.length === 0) return;
+
+    const currentIndex = items.indexOf(document.activeElement as HTMLElement);
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      const next = items[(currentIndex + 1 + items.length) % items.length];
+      next?.focus();
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      const prev = items[(currentIndex - 1 + items.length) % items.length];
+      prev?.focus();
+      return;
+    }
+    if (e.key === "Tab") {
+      // trap focus inside the menu
+      if (e.shiftKey && document.activeElement === items[0]) {
+        e.preventDefault();
+        items[items.length - 1].focus();
+      } else if (!e.shiftKey && document.activeElement === items[items.length - 1]) {
+        e.preventDefault();
+        items[0].focus();
+      }
+    }
+  };
+
+  // Open with keyboard from trigger (Enter/Space/ArrowDown)
+  const onTriggerKeyDown: React.KeyboardEventHandler<HTMLButtonElement> = (e) => {
+    if (disabled) return;
+    if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") {
+      e.preventDefault();
+      setOpen(true);
+    }
+  };
 
   return (
     <div
@@ -84,19 +157,26 @@ export function RemixMenu({
       style={{ position: "relative", display: "inline-block" }}
     >
       <button
+        ref={triggerRef}
         type="button"
         className="sn-btn"
         onClick={toggle}
+        onKeyDown={onTriggerKeyDown}
         disabled={disabled}
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-controls={open ? menuId : undefined}
       >
         {label}
       </button>
 
       {open && (
         <div
+          ref={menuRef}
           role="menu"
+          id={menuId}
+          aria-labelledby={headingId}
+          onKeyDown={onMenuKeyDown}
           style={{
             position: "absolute",
             top: "110%",
@@ -110,7 +190,9 @@ export function RemixMenu({
             zIndex: 50,
           }}
         >
-          <div style={{ fontWeight: 800, marginBottom: 6 }}>Create a remix</div>
+          <div id={headingId} style={{ fontWeight: 800, marginBottom: 6 }}>
+            Create a remix
+          </div>
           <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 10 }}>
             Keys never leave your browser. For production, route through your own FastAPI proxy if you need CORS.
           </div>
