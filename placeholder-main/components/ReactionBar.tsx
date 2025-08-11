@@ -32,8 +32,7 @@ export default function ReactionBar({
   const merged = useMemo<ReactionCounts>(() => {
     const safe: ReactionCounts = { ...DEFAULTS };
     for (const [k, v] of Object.entries(counts || {})) {
-      // Accept numeric values or numeric strings from APIs; anything
-      // non-numeric falls back to 0 so the UI stays stable. Clamp at 0.
+      // Accept numeric values or numeric strings; clamp at 0 to avoid negatives.
       const num = Number(v);
       safe[k] = Number.isFinite(num) ? Math.max(0, num) : 0;
     }
