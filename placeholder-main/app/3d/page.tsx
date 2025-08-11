@@ -1,19 +1,25 @@
 'use client';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
 
-export default function ThreePortal() {
+import { Canvas } from '@react-three/fiber';
+import { OrbitControls, Float } from '@react-three/drei';
+
+export default function Page3D() {
   return (
-    <main style={{ height: '100vh', background: '#06070c' }}>
-      <Canvas camera={{ position: [0, 0, 4] }}>
-        <ambientLight />
-        <pointLight position={[10, 10, 10]} />
-        <mesh rotation={[0.4, 0.6, 0]}>
-          <torusKnotGeometry args={[1, 0.3, 256, 32]} />
-          <meshStandardMaterial metalness={0.6} roughness={0.25} />
-        </mesh>
-        <OrbitControls />
-      </Canvas>
+    <main style={{ minHeight: '100vh', background: '#fff', display: 'grid', placeItems: 'center' }}>
+      <div style={{ width: 'min(92vw, 900px)', height: 'min(70vh, 560px)', border: '1px solid #e5e7eb', borderRadius: 16, overflow: 'hidden' }}>
+        <Canvas camera={{ position: [0, 0, 4], fov: 55 }}>
+          <color attach="background" args={['#ffffff']} />
+          <ambientLight intensity={0.9} />
+          <directionalLight position={[2, 3, 2]} intensity={0.9} />
+          <Float>
+            <mesh>
+              <torusKnotGeometry args={[0.9, 0.28, 200, 24]} />
+              <meshPhysicalMaterial color="#4f46e5" roughness={0.2} transmission={0.35} thickness={2} />
+            </mesh>
+          </Float>
+          <OrbitControls />
+        </Canvas>
+      </div>
     </main>
   );
 }
