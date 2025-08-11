@@ -1,16 +1,23 @@
 // components/ReactionBar.tsx
 'use client';
-import * as React from 'react';
 
-type Reaction = 'like' | 'love' | 'wow' | 'laugh' | 'sad' | 'angry';
-export type ReactionCounts = Partial<Record<Reaction, number>>;
+import { useState, useMemo } from 'react';
 
-export interface Props {
-  postId: string | number;                        // ⬅️ add this
-  counts?: ReactionCounts;                        // ⬅️ already using this
-  onChange?: (prev: Reaction | null, next: Reaction) => void;
+type ReactionCounts = Record<string, number>;
+
+export type Props = {
+  /** Optional id of the post using this bar (handy for analytics, testing) */
+  postId?: string;
+  /** Map of emoji -> count. Missing keys default to 0. */
+  counts?: ReactionCounts;
+  /** Notifies parent of a change: previous selection (or null) and new selection */
+  onChange?: (prev: string | null, next: string) => void;
+  /** Optional className so parent can style/position */
   className?: string;
-}
+};
+
+/** Stable default set so UI never collapses if counts are missing */
+const DEFAULTS: ReactionCounts = { '🔥': 0, '💖': 0, '🎉': 0, '👍': 0 };
 
 export default function ReactionBar({
   postId,
@@ -18,33 +25,79 @@ export default function ReactionBar({
   onChange,
   className,
 }: Props) {
-  const [selected, setSelected] = React.useState<Reaction | null>(null);
-  const [local, setLocal] = React.useState<ReactionCounts>({ ...counts });
+  // keep selected purely client-side; server markup stays consistent
+  const [selected, setSelected] = useState<string | null>(null);
 
-  const click = (r: Reaction) => {
-    setLocal(c => {
-      const next = { ...c };
-      if (selected) next[selected] = Math.max(0, (next[selected] ?? 0) - 1);
-      next[r] = (next[r] ?? 0) + 1;
+  // merge provided counts with defaults defensively
+  const merged = useMemo<ReactionCounts>(() => {
+    const safe: ReactionCounts = { ...DEFAULTS };
+    for (const [k, v] of Object.entries(counts || {})) {
+      safe[k] = Number.isFinite(v) ? Number(v) : 0;
+    }
+    return safe;
+  }, [counts]);
+
+  const handleClick = (next: string) => {
+    setSelected(prev => {
+      try { onChange?.(prev, next); } catch { /* swallow */ }
+      // toggle: clicking the same reaction keeps it selected (no unlike yet)
       return next;
     });
-    const prev = selected;
-    setSelected(r);
-    onChange?.(prev, r);
-  };
-
-  const items: Reaction[] = ['like', 'love', 'wow', 'laugh', 'sad', 'angry'];
-  const icons: Record<Reaction, string> = {
-    like: '👍', love: '❤️', wow: '🤯', laugh: '😂', sad: '😢', angry: '😡'
   };
 
   return (
-    <div data-post={String(postId)} className={className}>
-      {items.map(r => (
-        <button key={r} onClick={() => click(r)} aria-pressed={selected === r}>
-          {icons[r]} {local[r] ?? 0}
-        </button>
-      ))}
+    <div
+      className={className}
+      role="group"
+      aria-label="Reactions"
+      data-post-id={postId}
+    >
+      {Object.entries(merged).map(([emoji, n]) => {
+        const active = selected === emoji;
+        return (
+          <button
+            key={emoji}
+            type="button"
+            aria-pressed={active}
+            title={`${emoji} ${n}`}
+            onClick={() => handleClick(emoji)}
+            className={`rxn ${active ? 'active' : ''}`}
+          >
+            <span className="emoji" aria-hidden="true">{emoji}</span>
+            <span className="count">{n}</span>
+          </button>
+        );
+      })}
+
+      {/* Local styles so the component works even without external CSS */}
+      <style jsx>{`
+        .rxn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          height: 32px;
+          padding: 0 10px;
+          margin-right: 8px;
+          border-radius: 999px;
+          border: 1px solid var(--sn-stroke, #223);
+          background: #0f1626;
+          color: var(--sn-muted, #9aa6c1);
+          font-size: 13px;
+          line-height: 1;
+          transition: box-shadow .18s ease, border-color .18s ease, color .18s;
+        }
+        .rxn:hover {
+          border-color: #2a3754;
+          box-shadow: 0 0 0 2px var(--sn-ring, rgba(255,45,184,.35)) inset;
+        }
+        .rxn.active {
+          color: #fff;
+          border-color: #323f5e;
+          box-shadow: 0 0 0 2px var(--sn-ring, rgba(255,45,184,.35)) inset;
+        }
+        .emoji { font-size: 16px; }
+        .count { opacity: .9; }
+      `}</style>
     </div>
   );
 }
