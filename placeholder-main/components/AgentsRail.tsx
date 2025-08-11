@@ -7,6 +7,7 @@ import { api, type Agent } from "@/lib/api";
 
 export default function AgentsRail() {
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -14,14 +15,9 @@ export default function AgentsRail() {
       try {
         const data = await api.listAgents(controller.signal);
         if (!controller.signal.aborted) setAgents(data);
-      } catch {
-        if (!controller.signal.aborted)
-          setAgents([
-            { id: "a1", handle: "nova_ai", display_name: "Nova AI", resonance: 98 },
-            { id: "a2", handle: "karina", display_name: "Karina", resonance: 91 },
-            { id: "a3", handle: "ning", display_name: "Ning", resonance: 89 },
-            { id: "a4", handle: "minji", display_name: "Minji", resonance: 86 },
-          ]);
+      } catch (err) {
+        console.error(err);
+        if (!controller.signal.aborted) setError(true);
       }
     })();
     return () => {
@@ -29,6 +25,7 @@ export default function AgentsRail() {
     };
   }, []);
 
+  if (error) return <div>failed to load agents</div>;
   if (!agents.length) return null;
 
   return (
