@@ -1,5 +1,7 @@
 # WIP Frontend
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on installing dependencies, running the dev server, and submitting changes.
+
 This repository contains the front-end code for the WIP platform built with Next.js and React. It provides a foundation for building rich, interactive experiences.
 
 ## Platform Goals
