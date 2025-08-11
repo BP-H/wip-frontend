@@ -2,23 +2,50 @@
 const BASE = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000';
 
 export async function getStatus() {
-  const r = await fetch(`${BASE}/status`, { cache: 'no-store' });
-  if (!r.ok) throw new Error('status failed');
+  const url = `${BASE}/status`;
+  const r = await fetch(url, { cache: 'no-store' });
+  if (!r.ok) {
+    let text: string | undefined;
+    try {
+      text = await r.text();
+    } catch {
+      // ignore
+    }
+    throw new Error(`${url} failed: ${r.status} ${r.statusText}${text ? ` - ${text}` : ''}`);
+  }
   return r.json();
 }
 
 export async function getEntropy() {
-  const r = await fetch(`${BASE}/system/collective-entropy`, { cache: 'no-store' });
-  if (!r.ok) throw new Error('entropy failed');
+  const url = `${BASE}/system/collective-entropy`;
+  const r = await fetch(url, { cache: 'no-store' });
+  if (!r.ok) {
+    let text: string | undefined;
+    try {
+      text = await r.text();
+    } catch {
+      // ignore
+    }
+    throw new Error(`${url} failed: ${r.status} ${r.statusText}${text ? ` - ${text}` : ''}`);
+  }
   return r.json();
 }
 
 export async function aiAssist(vibenodeId: number, prompt: string, token: string) {
-  const r = await fetch(`${BASE}/ai-assist/${vibenodeId}`, {
+  const url = `${BASE}/ai-assist/${vibenodeId}`;
+  const r = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ prompt }),
   });
-  if (!r.ok) throw new Error('ai-assist failed');
+  if (!r.ok) {
+    let text: string | undefined;
+    try {
+      text = await r.text();
+    } catch {
+      // ignore
+    }
+    throw new Error(`${url} failed: ${r.status} ${r.statusText}${text ? ` - ${text}` : ''}`);
+  }
   return r.json();
 }
