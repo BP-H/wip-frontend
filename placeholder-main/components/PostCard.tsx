@@ -3,6 +3,7 @@
 
 import React from 'react';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import ReactionBar from './ReactionBar';
 import styles from './postcard.module.css';
 import type { Post } from '@/lib/feed';
@@ -41,8 +42,13 @@ export default function PostCard({
     <article className={styles.card}>
       <header className={styles.header}>
         {post.author?.avatar ? (
-          // using <img> to avoid Next/Image config for now
-          <img className={styles.avatar} src={post.author.avatar} alt="" />
+          <Image
+            className={styles.avatar}
+            src={post.author.avatar}
+            alt=""
+            width={40}
+            height={40}
+          />
         ) : (
           <div className={styles.avatar} aria-hidden />
         )}
@@ -59,12 +65,13 @@ export default function PostCard({
         {post.text ? <p className={styles.text}>{post.text}</p> : null}
 
         {post.type === 'image' && post.image ? (
-          <img
+          <Image
             src={post.image}
             alt={imgAlt}
             className={styles.media}
             loading="lazy"
-            decoding="async"
+            width={800}
+            height={533}
           />
         ) : null}
 
