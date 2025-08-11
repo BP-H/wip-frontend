@@ -182,6 +182,22 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           >
             Google Cloud
           </Link>
+          <Link
+            href="https://www.instagram.com/oauth/authorize"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.connector}
+          >
+            Instagram
+          </Link>
+          <Link
+            href="https://www.linkedin.com/oauth/v2/authorization"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.connector}
+          >
+            LinkedIn
+          </Link>
         </div>
 
         <div className={styles.ctaWrap}>
