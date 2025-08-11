@@ -3,6 +3,17 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
+// app/page.tsx
+import InfiniteFeed from "@/components/InfiniteFeed";
+
+export default function Home() {
+  return (
+    <main style={{ maxWidth: 980, margin: "0 auto", padding: "16px" }}>
+      <InfiniteFeed />
+    </main>
+  );
+}
+
 
 export default function Page() {
   const [species, setSpecies] = useState<'human' | 'company' | 'ai'>('human');
