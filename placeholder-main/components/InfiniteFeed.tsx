@@ -35,6 +35,7 @@ export default function InfiniteFeed({
 
   useEffect(() => {
     if (!sentinelRef.current) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const io = new IntersectionObserver(
       (entries) => {
         if (!hasMore || loading) return;
@@ -42,7 +43,7 @@ export default function InfiniteFeed({
         if (first.isIntersecting) {
           setLoading(true);
           // fake fetch
-          setTimeout(() => {
+          timer = setTimeout(() => {
             const nextPage = page + 1;
             const start = (nextPage - 1) * pageSize;
             const next = makePosts(start, pageSize);
@@ -57,7 +58,10 @@ export default function InfiniteFeed({
     );
 
     io.observe(sentinelRef.current);
-    return () => io.disconnect();
+    return () => {
+      if (timer) clearTimeout(timer);
+      io.disconnect();
+    };
   }, [page, pageSize, maxPages, loading, hasMore]);
 
   return (
