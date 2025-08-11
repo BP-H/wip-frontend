@@ -1,7 +1,7 @@
 // components/RemixMenu.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 export type RemixMenuProps = {
   /** Called when the user confirms “Create remix”. */
@@ -33,6 +33,7 @@ export function RemixMenu({
   label = "Remix",
 }: RemixMenuProps) {
   const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   function toggle() {
     setOpen(v => !v);
@@ -53,8 +54,35 @@ export function RemixMenu({
     close();
   }
 
+  useEffect(() => {
+    if (!open) return;
+
+    function handleKeydown(e: KeyboardEvent) {
+      if (e.key === "Escape") close();
+    }
+
+    function handleMousedown(e: MouseEvent) {
+      const wrapper = wrapperRef.current;
+      if (wrapper && !wrapper.contains(e.target as Node)) {
+        close();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeydown);
+    document.addEventListener("mousedown", handleMousedown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeydown);
+      document.removeEventListener("mousedown", handleMousedown);
+    };
+  }, [open]);
+
   return (
-    <div className={className} style={{ position: "relative", display: "inline-block" }}>
+    <div
+      ref={wrapperRef}
+      className={className}
+      style={{ position: "relative", display: "inline-block" }}
+    >
       <button
         type="button"
         className="sn-btn"
