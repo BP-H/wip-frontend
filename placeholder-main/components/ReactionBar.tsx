@@ -10,7 +10,7 @@ export type Props = {
   postId?: string;
   /** Map of emoji -> count. Missing keys default to 0. */
   counts?: ReactionCounts;
-  /** Notifies parent of a change: previous selection (or null) and new selection */
+  /** Notifies parent of a change: previous selection (or null) and new selection (or null) */
   onChange?: (prev: string | null, next: string | null) => void;
   /** Optional className so parent can style/position */
   className?: string;
@@ -33,21 +33,22 @@ export default function ReactionBar({
     const safe: ReactionCounts = { ...DEFAULTS };
     for (const [k, v] of Object.entries(counts || {})) {
       // Accept numeric values or numeric strings from APIs; anything
-      // non-numeric falls back to 0 so the UI stays stable.
+      // non-numeric falls back to 0 so the UI stays stable. Clamp at 0.
       const num = Number(v);
-      // clamp at 0 so bogus negative values don't show
       safe[k] = Number.isFinite(num) ? Math.max(0, num) : 0;
     }
     return safe;
   }, [counts]);
 
   const handleClick = (next: string) => {
-    setSelected(prev => {
-      const isSame = prev === next;
-      try { onChange?.(prev, isSame ? null : next); } catch { /* swallow */ }
-      // clear selection when clicking the active reaction
-      return isSame ? null : next;
-    });
+    const prev = selected;
+    const newVal = prev === next ? null : next; // clicking active clears selection
+    setSelected(newVal);
+    try {
+      onChange?.(prev, newVal);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
