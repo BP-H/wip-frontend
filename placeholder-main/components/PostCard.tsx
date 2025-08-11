@@ -1,12 +1,19 @@
 // components/PostCard.tsx
-"use client";
+'use client';
 
-import dynamic from "next/dynamic";
-import ReactionBar from "./ReactionBar";
-import styles from "./postcard.module.css";
-import type { Post } from "@/lib/feed";
+import React from 'react';
+import dynamic from 'next/dynamic';
+import ReactionBar from './ReactionBar';
+import styles from './postcard.module.css';
+import type { Post } from '@/lib/feed';
 
-const Mini3D = dynamic(() => import("./Mini3D"), { ssr: false });
+// Client-only tiny 3D tile for `type === "three"`
+const Mini3D = dynamic(() => import('./Mini3D'), {
+  ssr: false,
+  loading: () => <div className="min3d-skeleton" aria-label="Loading 3D…" />,
+});
+
+type AnyObj = Record<string, any>;
 
 export default function PostCard({
   post,
@@ -15,53 +22,60 @@ export default function PostCard({
   post: Post;
   onReact?: (prev: string | null, next: string) => void;
 }) {
+  const p = post as unknown as AnyObj; // tolerate partial data without exploding
   const handleReact = onReact ?? (() => {});
 
-  // Avoid TS error: Post doesn't have `alt`. Use a safe fallback.
+  // Safe, descriptive alt text
   const imgAlt =
-    (post.text && String(post.text).slice(0, 80)) ||
-    (post as any)?.author?.name
-      ? `${(post as any).author.name}'s post image`
-      : "post image";
+    (typeof p.text === 'string' && p.text.trim().slice(0, 80)) ||
+    (p.author?.name ? `${p.author.name}'s post image` : 'post image');
+
+  // Deterministic seed for 3D (varies per post but stable)
+  const threeSeed = String(p.id ?? Math.random());
 
   return (
     <article className={styles.card}>
       <header className={styles.header}>
-        <img className={styles.avatar} src={(post as any).author?.avatar} alt="" />
+        {p.author?.avatar ? (
+          // using <img> to avoid Next/Image config for now
+          <img className={styles.avatar} src={p.author.avatar} alt="" />
+        ) : (
+          <div className={styles.avatar} aria-hidden />
+        )}
         <div>
-          <div className={styles.name}>{(post as any).author?.name}</div>
+          <div className={styles.name}>{p.author?.name ?? 'anon'}</div>
           <div className={styles.meta}>
-            @{(post as any).author?.handle} ·{" "}
-            {new Date((post as any).createdAt).toLocaleString()}
+            @{p.author?.handle ?? 'unknown'} ·{' '}
+            {p.createdAt ? new Date(p.createdAt).toLocaleString() : 'just now'}
           </div>
         </div>
       </header>
 
       <div className={styles.body}>
-        {post.text && <p className={styles.text}>{post.text}</p>}
+        {p.text ? <p className={styles.text}>{p.text}</p> : null}
 
-        {post.type === "image" && (post as any).image && (
+        {p.type === 'image' && p.image ? (
           <img
-            src={(post as any).image}
+            src={p.image}
             alt={imgAlt}
             className={styles.media}
             loading="lazy"
             decoding="async"
           />
-        )}
+        ) : null}
 
-        {post.type === "three" && <Mini3D />}
+        {p.type === 'three' ? <Mini3D seed={threeSeed} /> : null}
       </div>
 
       <footer className={styles.footer}>
         <ReactionBar
-          postId={post.id as unknown as string}
-          counts={(post as any).reactions ?? {}}
+          postId={String(p.id ?? '')}             // <- no “unknown as string”
+          counts={(p.reactions as AnyObj) ?? {}}
           onChange={handleReact}
         />
-        <button className="sn-btn">Comment</button>
-        <button className="sn-btn">Remix</button>
-        <button className="sn-btn">Share</button>
+        <button className="sn-btn" type="button">Comment</button>
+        <button className="sn-btn" type="button">Remix</button>
+        <button className="sn-btn" type="button">Share</button>
       </footer>
     </article>
   );
