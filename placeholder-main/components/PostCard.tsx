@@ -69,7 +69,7 @@ export default function PostCard({
 
       <footer className={styles.footer}>
         <ReactionBar
-          postId={String(p.id ?? '')}             // <- no “unknown as string”
+          postId={String(post.id)}       // <- no “unknown as string”
           counts={(p.reactions as AnyObj) ?? {}}
           onChange={handleReact}
         />
