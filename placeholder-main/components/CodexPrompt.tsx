@@ -51,15 +51,15 @@ export default function CodexPrompt() {
       <header className="row">
         <strong>Stable bug‑fix agent prompt</strong>
         <div className="grow" />
-        <button className="chip" onClick={toggle}>{collapsed ? 'Show' : 'Hide'}</button>
+        <button type="button" className="chip" onClick={toggle}>{collapsed ? 'Show' : 'Hide'}</button>
       </header>
 
       {!collapsed && (
         <>
           <textarea rows={5} value={value} onChange={e => setValue(e.target.value)} spellCheck={false} />
           <div className="actions">
-            <button className="btn" onClick={() => setValue(DEFAULT_PROMPT)}>Reset</button>
-            <button className="btn primary" onClick={copy}>{copied ? 'Copied!' : 'Copy'}</button>
+            <button type="button" className="btn" onClick={() => setValue(DEFAULT_PROMPT)}>Reset</button>
+            <button type="button" className="btn primary" onClick={copy}>{copied ? 'Copied!' : 'Copy'}</button>
           </div>
         </>
       )}
