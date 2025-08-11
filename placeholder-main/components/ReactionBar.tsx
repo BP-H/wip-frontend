@@ -35,7 +35,8 @@ export default function ReactionBar({
       // Accept numeric values or numeric strings from APIs; anything
       // non-numeric falls back to 0 so the UI stays stable.
       const num = Number(v);
-      safe[k] = Number.isFinite(num) ? num : 0;
+      // clamp at 0 so bogus negative values don't show
+      safe[k] = Number.isFinite(num) ? Math.max(0, num) : 0;
     }
     return safe;
   }, [counts]);
