@@ -1,7 +1,7 @@
 // components/RemixPicker.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 type Props = {
   open: boolean;
@@ -19,6 +19,14 @@ const ALL_APIS = [
 
 export default function RemixPicker({ open, onClose, onConfirm }: Props) {
   const [selected, setSelected] = useState<string[]>([]);
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open, onClose]);
   if (!open) return null;
 
   function toggle(name: string) {
