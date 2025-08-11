@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Float, Environment, Html, OrbitControls } from '@react-three/drei';
+import { Float, Html, OrbitControls, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 
 type ShapeKind = 'rock' | 'cube' | 'torus';
@@ -12,15 +12,15 @@ function Rock({ seed = 0 }) {
   const speed = useMemo(() => 0.2 + ((seed % 100) / 150), [seed]);
   useFrame((state, dt) => {
     const t = state.clock.elapsedTime * speed + seed;
-    ref.current.rotation.x += 0.3 * dt;
-    ref.current.rotation.y += 0.2 * dt;
-    ref.current.position.y = Math.sin(t) * 0.6;
-    ref.current.position.x = Math.cos(t * 0.7) * 0.4;
+    ref.current.rotation.x += 0.28 * dt;
+    ref.current.rotation.y += 0.22 * dt;
+    ref.current.position.y = Math.sin(t) * 0.5;
+    ref.current.position.x = Math.cos(t * 0.7) * 0.35;
   });
   return (
     <mesh ref={ref}>
       <icosahedronGeometry args={[0.7, 0]} />
-      <meshStandardMaterial metalness={0.3} roughness={0.35} />
+      <meshStandardMaterial color="#eef1f6" roughness={0.6} metalness={0.1} />
     </mesh>
   );
 }
@@ -30,14 +30,14 @@ function Cube({ seed = 0 }) {
   const speed = useMemo(() => 0.1 + ((seed % 50) / 200), [seed]);
   useFrame((state) => {
     const t = state.clock.elapsedTime * speed + seed;
-    ref.current.rotation.x = Math.sin(t * 1.2) * 0.8;
-    ref.current.rotation.z = Math.cos(t) * 0.6;
-    ref.current.position.z = Math.sin(t * 0.9) * 0.8;
+    ref.current.rotation.x = Math.sin(t * 1.2) * 0.5;
+    ref.current.rotation.z = Math.cos(t) * 0.4;
+    ref.current.position.z = Math.sin(t * 0.9) * 0.6;
   });
   return (
     <mesh ref={ref}>
       <boxGeometry args={[0.9, 0.9, 0.9]} />
-      <meshStandardMaterial wireframe />
+      <meshStandardMaterial color="#ffffff" roughness={0.4} metalness={0.05} />
     </mesh>
   );
 }
@@ -48,13 +48,14 @@ function Torus({ seed = 0 }) {
   useFrame((state) => {
     const t = state.clock.elapsedTime * speed + seed;
     ref.current.rotation.y += 0.01 + Math.sin(t) * 0.01;
-    ref.current.position.x = Math.sin(t * 0.6) * 0.7;
-    ref.current.position.y = Math.cos(t * 0.6) * 0.5;
+    ref.current.position.x = Math.sin(t * 0.6) * 0.55;
+    ref.current.position.y = Math.cos(t * 0.6) * 0.4;
   });
   return (
     <mesh ref={ref}>
-      <torusKnotGeometry args={[0.5, 0.18, 100, 16]} />
-      <meshPhysicalMaterial transmission={0.5} thickness={2} roughness={0.15} />
+      <torusKnotGeometry args={[0.48, 0.16, 120, 18]} />
+      {/* soft translucent look on white */}
+      <meshPhysicalMaterial color="#f9fbff" transmission={0.45} thickness={2} roughness={0.2} />
     </mesh>
   );
 }
@@ -62,18 +63,18 @@ function Torus({ seed = 0 }) {
 function Trio() {
   return (
     <>
-      <Float speed={1} rotationIntensity={0.6} floatIntensity={1.2}>
+      <Float speed={1} rotationIntensity={0.35} floatIntensity={0.8}>
         <group position={[-1.2, 0.2, 0]}>
           <Rock seed={11} />
         </group>
       </Float>
-      <Float speed={1.2} rotationIntensity={0.3} floatIntensity={1}>
+      <Float speed={1.2} rotationIntensity={0.25} floatIntensity={0.7}>
         <group position={[0.8, -0.2, 0.2]}>
           <Cube seed={29} />
         </group>
       </Float>
-      <Float speed={0.9} rotationIntensity={0.7} floatIntensity={1.4}>
-        <group position={[0.2, 0.4, -0.3]}>
+      <Float speed={0.9} rotationIntensity={0.4} floatIntensity={0.9}>
+        <group position={[0.2, 0.35, -0.3]}>
           <Torus seed={47} />
         </group>
       </Float>
@@ -91,11 +92,12 @@ export default function PortalHero({
   const [open, setOpen] = useState(false);
   const [scale, setScale] = useState(1);
 
-  // Compress as you scroll
+  // Compress the hero as you scroll
   useEffect(() => {
     const onScroll = () => {
       const y = window.scrollY || 0;
-      setScale(Math.max(0.7, 1 - y / 900));
+      const s = Math.max(0.82, 1 - y / 900);
+      setScale(s);
     };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -104,7 +106,6 @@ export default function PortalHero({
 
   return (
     <>
-      {/* sticky, scroll‑compressing preview */}
       <div
         style={{
           position: 'sticky',
@@ -113,30 +114,36 @@ export default function PortalHero({
           transform: `scale(${scale})`,
           transformOrigin: 'top center',
           transition: 'transform .15s linear',
-          borderBottom: '1px solid rgba(255,255,255,.08)',
-          background:
-            'radial-gradient(100% 120% at 0% 0%, rgba(155,140,255,.08), transparent 60%), linear-gradient(180deg, #0d0f16, #0b0d13)',
-          borderRadius: 16,
-          overflow: 'hidden',
+          borderBottom: '1px solid var(--stroke, #e5e7eb)',
+          background: 'var(--panel, #ffffff)',
         }}
       >
-        <div style={{ height: 280, position: 'relative' }}>
+        <div
+          style={{
+            height: 220,
+            borderRadius: 16,
+            overflow: 'hidden',
+            position: 'relative',
+            border: '1px solid var(--stroke, #e5e7eb)',
+          }}
+        >
           <Canvas camera={{ position: [0, 0, 3.2], fov: 50 }} dpr={[1, 2]}>
-            <color attach="background" args={['#0b0d13']} />
-            <ambientLight intensity={0.7} />
-            <directionalLight position={[2, 2, 2]} intensity={1.1} />
-            <Environment preset="city" />
+            {/* white canvas */}
+            <color attach="background" args={['#ffffff']} />
+            <ambientLight intensity={0.8} />
+            <directionalLight position={[2, 3, 2]} intensity={0.9} />
             <Trio />
+            <ContactShadows position={[0, -0.85, 0]} opacity={0.25} scale={10} blur={1.8} far={2} />
+            {/* hint overlay */}
             <Html center>
               <button
                 onClick={() => setOpen(true)}
                 style={{
                   padding: '10px 14px',
                   borderRadius: 12,
-                  border: '1px solid rgba(255,255,255,.12)',
-                  background: 'rgba(17,19,29,.6)',
-                  backdropFilter: 'blur(6px)',
-                  color: '#fff',
+                  border: '1px solid var(--stroke, #e5e7eb)',
+                  background: 'rgba(255,255,255,0.8)',
+                  color: '#0f172a',
                   cursor: 'pointer',
                   fontWeight: 700,
                 }}
@@ -149,25 +156,24 @@ export default function PortalHero({
         </div>
       </div>
 
-      {/* full‑screen portal */}
+      {/* Fullscreen portal */}
       {open && (
         <div
           role="dialog"
           aria-modal="true"
-          onClick={() => setOpen(false)}
           style={{
             position: 'fixed',
             inset: 0,
             zIndex: 999,
-            background:
-              'radial-gradient(120% 120% at 50% 0%, rgba(155,140,255,.15), transparent 60%), #080a10',
+            background: '#ffffff',
+            borderTop: '1px solid var(--stroke, #e5e7eb)',
           }}
+          onClick={() => setOpen(false)}
         >
           <Canvas camera={{ position: [0, 0, 5], fov: 55 }}>
-            <color attach="background" args={['#080a10']} />
-            <ambientLight intensity={0.6} />
-            <directionalLight position={[3, 2, 2]} intensity={1.2} />
-            <Environment preset="city" />
+            <color attach="background" args={['#ffffff']} />
+            <ambientLight intensity={0.8} />
+            <directionalLight position={[3, 2, 2]} intensity={0.9} />
             {Array.from({ length: 18 }).map((_, i) => {
               const kind: ShapeKind = (['rock', 'cube', 'torus'] as const)[i % 3];
               const pos = new THREE.Vector3(
@@ -184,17 +190,18 @@ export default function PortalHero({
               );
             })}
             <OrbitControls enablePan={false} />
+            <ContactShadows position={[0, -1.2, 0]} opacity={0.25} scale={15} blur={2.4} far={3} />
             <Html center>
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 12,
+                  gap: 10,
                   padding: '8px 12px',
                   borderRadius: 12,
-                  border: '1px solid rgba(255,255,255,.12)',
-                  background: 'rgba(15,17,26,.6)',
-                  color: '#fff',
+                  border: '1px solid var(--stroke, #e5e7eb)',
+                  background: 'rgba(255,255,255,0.85)',
+                  color: '#0f172a',
                   fontWeight: 700,
                 }}
               >
