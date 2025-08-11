@@ -2,19 +2,19 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Float, Html, OrbitControls, ContactShadows } from '@react-three/drei';
+import { Float, Html, ContactShadows, OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
+// postprocessing bloom for a subtle energy glow (drei bundles postprocessing)
+import { EffectComposer, Bloom } from '@react-three/postprocessing';
 
 type ShapeKind = 'rock' | 'cube' | 'torus';
 
-/** small helpers */
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
-const scrollTop = () =>
+const getScroll = () =>
   typeof window === 'undefined'
     ? 0
     : window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
 
-/** shapes */
 function Rock({ seed = 0 }) {
   const ref = useRef<THREE.Mesh>(null!);
   const speed = useMemo(() => 0.2 + ((seed % 100) / 150), [seed]);
@@ -90,52 +90,49 @@ function Trio() {
 }
 
 /**
- * Sticky wrapper lives on the OUTER div (no transform/overflow on it).
- * We scale a CHILD div — this keeps sticky working on iOS/Android.
+ * Sticky is on the OUTER node; scale is on a CHILD.
+ * This keeps sticky working on iOS/Android.
+ * Also adds a CSS animated “energy ring” and Bloom for a clean lightning vibe.
  */
 export default function PortalHero({
-  title = 'Enter universe — tap to interact',
+  title = 'Enter the portal — tap to interact',
   logoSrc = '/icon.png',
 }: {
   title?: string;
   logoSrc?: string;
 }) {
-  const [scale, setScale] = useState(1);
   const [open, setOpen] = useState(false);
+  const [scale, setScale] = useState(1);
 
   useEffect(() => {
     let ticking = false;
-    const handle = () => {
-      const y = scrollTop();
-      const s = clamp(1 - y / 900, 0.82, 1); // 1 → 0.82 over ~900px
-      setScale(s);
+    const calc = () => {
+      const y = getScroll();
+      setScale(clamp(1 - y / 900, 0.84, 1));
       ticking = false;
     };
     const onScroll = () => {
       if (!ticking) {
         ticking = true;
-        requestAnimationFrame(handle);
+        requestAnimationFrame(calc);
       }
     };
-    handle();
+    calc();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   return (
     <div
-      className="portalSticky"
       style={{
         position: 'sticky',
         top: 0,
-        zIndex: 5,
+        zIndex: 6,
+        background: 'var(--panel, #fff)',
         borderBottom: '1px solid var(--stroke, #e5e7eb)',
-        background: 'var(--panel, #ffffff)',
       }}
     >
-      {/* scale the inner, keep sticky on the parent */}
       <div
-        className="portalScale"
         style={{
           transform: `scale(${scale})`,
           transformOrigin: 'top center',
@@ -143,34 +140,50 @@ export default function PortalHero({
         }}
       >
         <div
-          className="portalCanvasWrap"
           style={{
             height: 220,
+            position: 'relative',
             borderRadius: 16,
             overflow: 'hidden',
-            position: 'relative',
             border: '1px solid var(--stroke, #e5e7eb)',
             touchAction: 'manipulation',
           }}
         >
-          {/* light ring / portal glow */}
+          {/* Energy ring overlay (CSS only, no gradients mixing pink/blue) */}
           <div
             aria-hidden
             style={{
               position: 'absolute',
-              inset: -40,
-              background:
-                'radial-gradient(50% 60% at 50% 20%, rgba(255,45,184,.18), rgba(79,70,229,.12) 30%, transparent 70%)',
+              inset: -20,
               pointerEvents: 'none',
               mixBlendMode: 'multiply',
+              animation: 'portalPulse 2.4s ease-in-out infinite',
+              background:
+                'radial-gradient(60% 50% at 50% 35%, rgba(255,45,184,.16) 0, rgba(255,45,184,.08) 25%, transparent 70%)',
             }}
           />
+          <div
+            aria-hidden
+            style={{
+              position: 'absolute',
+              inset: -20,
+              pointerEvents: 'none',
+              animation: 'portalPulseB 3.4s ease-in-out infinite',
+              background:
+                'radial-gradient(55% 45% at 50% 30%, rgba(79,70,229,.10) 0, rgba(79,70,229,.05) 25%, transparent 70%)',
+            }}
+          />
+
           <Canvas camera={{ position: [0, 0, 3.2], fov: 50 }} dpr={[1, 2]}>
             <color attach="background" args={['#ffffff']} />
-            <ambientLight intensity={0.8} />
+            <ambientLight intensity={0.85} />
             <directionalLight position={[2, 3, 2]} intensity={0.9} />
             <Trio />
-            <ContactShadows position={[0, -0.85, 0]} opacity={0.25} scale={10} blur={1.8} far={2} />
+            <ContactShadows position={[0, -0.85, 0]} opacity={0.2} scale={10} blur={1.8} far={2} />
+            <EffectComposer>
+              <Bloom intensity={0.5} luminanceThreshold={0.8} luminanceSmoothing={0.2} />
+            </EffectComposer>
+
             <Html center>
               <button
                 onClick={() => setOpen(true)}
@@ -178,36 +191,47 @@ export default function PortalHero({
                   padding: '10px 14px',
                   borderRadius: 12,
                   border: '1px solid var(--stroke, #e5e7eb)',
-                  background: 'rgba(255,255,255,0.88)',
+                  background: 'rgba(255,255,255,0.9)',
                   color: '#0f172a',
                   cursor: 'pointer',
                   fontWeight: 700,
                 }}
-                aria-label="Open 3D universe"
+                aria-label="Open 3D portal"
               >
                 {title}
               </button>
             </Html>
           </Canvas>
+
+          {/* keyframes */}
+          <style jsx>{`
+            @keyframes portalPulse {
+              0%, 100% { opacity: .55; filter: blur(6px) contrast(1); }
+              50% { opacity: .85; filter: blur(10px) contrast(1.05); }
+            }
+            @keyframes portalPulseB {
+              0%, 100% { opacity: .35; filter: blur(8px) }
+              50% { opacity: .65; filter: blur(12px) }
+            }
+          `}</style>
         </div>
       </div>
 
-      {/* fullscreen portal */}
       {open && (
         <div
           role="dialog"
           aria-modal="true"
+          onClick={() => setOpen(false)}
           style={{
             position: 'fixed',
             inset: 0,
             zIndex: 999,
-            background: '#ffffff',
+            background: '#fff',
           }}
-          onClick={() => setOpen(false)}
         >
           <Canvas camera={{ position: [0, 0, 5], fov: 55 }}>
             <color attach="background" args={['#ffffff']} />
-            <ambientLight intensity={0.8} />
+            <ambientLight intensity={0.85} />
             <directionalLight position={[3, 2, 2]} intensity={0.9} />
             {Array.from({ length: 18 }).map((_, i) => {
               const kind: ShapeKind = (['rock', 'cube', 'torus'] as const)[i % 3];
@@ -225,7 +249,10 @@ export default function PortalHero({
               );
             })}
             <OrbitControls enablePan={false} />
-            <ContactShadows position={[0, -1.2, 0]} opacity={0.25} scale={15} blur={2.2} far={3} />
+            <ContactShadows position={[0, -1.2, 0]} opacity={0.2} scale={15} blur={2.2} far={3} />
+            <EffectComposer>
+              <Bloom intensity={0.55} luminanceThreshold={0.8} luminanceSmoothing={0.25} />
+            </EffectComposer>
             <Html center>
               <div
                 style={{
