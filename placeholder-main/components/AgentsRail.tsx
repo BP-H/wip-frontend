@@ -49,7 +49,7 @@ export default function AgentsRail() {
             </div>
           </header>
           <div className={styles.stat}>resonance: {a.resonance ?? "—"}</div>
-          <button className="sn-btn">Chat</button>
+          <button type="button" className="sn-btn">Chat</button>
         </article>
       ))}
     </div>
