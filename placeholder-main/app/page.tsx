@@ -1,45 +1,37 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
+import InfiniteFeed from '@/components/InfiniteFeed';
 
 const PortalHero = dynamic(() => import('@/components/PortalHero'), { ssr: false });
 
-type PostItem = { id: string; author: string; time: string; text: string; image?: string };
+function NavButton({ label }: { label: string }) {
+  return <button className="btn">{label}</button>;
+}
 
-function makeDemoFeed(n = 14): PostItem[] {
-  return Array.from({ length: n }).map((_, i) => ({
-    id: String(i + 1),
-    author: ['@proto_ai', '@neonfork', '@superNova_2177'][i % 3],
-    time: new Date(Date.now() - i * 1000 * 60 * 7).toLocaleString(),
-    text:
-      i % 4 === 0
-        ? 'Low-poly moment — rotating differently in each instance as you scroll.'
-        : 'Prototype feed — symbolic demo copy for layout testing.',
-    image: i % 2 === 0 ? `https://picsum.photos/seed/white_${i}/960/540` : undefined,
-  }));
+function Post({ title, excerpt }: { title: string; excerpt: string }) {
+  return (
+    <div className="post">
+      <div style={{ fontWeight: 700 }}>{title}</div>
+      <div className="muted">{excerpt}</div>
+    </div>
+  );
 }
 
 export default function Page() {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [drawer, setDrawer] = useState(false); // mobile sidebar
   const [species, setSpecies] = useState<'human' | 'company' | 'ai'>('human');
-  const feed = useMemo(() => makeDemoFeed(16), []);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <main className="root">
-      {/* Sticky top bar */}
-      <header className="topbar">
-        <div className="leftCluster">
-          <button className="iconBtn showMobile" aria-label="Open menu" onClick={() => setDrawer(true)}>
-            ☰
-          </button>
-          <Link href="/" className="brand" aria-label="home">
-            <Image src="/icon.png" width={28} height={28} alt="app" className="logo" />
-            <b>superNova_2177</b>
-          </Link>
+    <main className="sn-root">
+      {/* Top bar */}
+      <header className="sn-topbar">
+        <div className="brand">
+          <Image src="/icon.png" width={28} height={28} alt="superNova_2177" className="logo" />
+          <b>superNova_2177</b>
         </div>
 
         <div className="search">
@@ -47,20 +39,26 @@ export default function Page() {
         </div>
 
         <div className="actions">
+          <button className="btn">Create post</button>
           <Link href="/3d" className="btn primary" style={{ textDecoration: 'none' }}>
-            Launch 3D
+            Launch 3D (beta)
           </Link>
+
+          {/* Avatar -> burger */}
           <button
-            className="avatarBtn"
+            className="avatar-btn"
             aria-haspopup="menu"
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((v) => !v)}
             title="Open profile"
           >
             <Image src="/icon.png" width={28} height={28} alt="Profile" />
+            <span className="burger" aria-hidden>
+              ≡
+            </span>
           </button>
           {menuOpen && (
-            <div role="menu" className="avatarMenu" onMouseLeave={() => setMenuOpen(false)}>
+            <div role="menu" className="avatar-menu">
               <Link href="/profile" role="menuitem">
                 Profile
               </Link>
@@ -78,12 +76,12 @@ export default function Page() {
         </div>
       </header>
 
-      {/* App shell */}
-      <div className="shell">
-        {/* LEFT rail (desktop) */}
+      {/* 3‑column layout */}
+      <div className="sn-grid">
+        {/* Left nav */}
         <aside className="left">
-          <div className="card profileCard">
-            <div className="profileRow">
+          <div className="sn-card">
+            <div className="profile">
               <div className="avatar">
                 <Image src="/icon.png" width={48} height={48} alt="avatar" />
               </div>
@@ -94,65 +92,60 @@ export default function Page() {
             </div>
           </div>
 
-          <nav className="card navStack">
-            {['Feed', 'Messages', 'Proposals', 'Decisions', 'Execution', 'Companies', 'Settings'].map((l) => (
-              <button key={l} className="btn ghost leftnav">
-                {l}
-              </button>
-            ))}
-          </nav>
+          <div className="sn-card nav">
+            <NavButton label="Feed" />
+            <NavButton label="Messages" />
+            <NavButton label="Proposals" />
+            <NavButton label="Decisions" />
+            <NavButton label="Execution" />
+            <NavButton label="Companies" />
+            <NavButton label="Settings" />
+          </div>
 
-          <div className="card">
+          <div className="sn-card">
             <div className="muted">Quick stats</div>
             <div className="kpis">
-              <div className="tile"><div className="k">2,302</div><div className="muted">Profile views</div></div>
-              <div className="tile"><div className="k">1,542</div><div className="muted">Post reach</div></div>
-              <div className="tile"><div className="k">12</div><div className="muted">Companies</div></div>
+              <div className="tile">
+                <div className="k">2,302</div>
+                <div className="muted">Profile views</div>
+              </div>
+              <div className="tile">
+                <div className="k">1,542</div>
+                <div className="muted">Post reach</div>
+              </div>
+              <div className="tile">
+                <div className="k">12</div>
+                <div className="muted">Companies</div>
+              </div>
             </div>
           </div>
         </aside>
 
-        {/* CENTER */}
+        {/* Main content */}
         <section className="center">
-          <div className="card heroIntro">
-            <PortalHero title="Enter the portal — tap to interact" logoSrc="/icon.png" />
-            <p className="muted heroCopy">
-              Minimal white interface with separate accents (pink/blue). Sticky portal compresses smoothly and stays on
-              top on mobile.
-            </p>
-            <div className="ctaRow">
-              <Link href="/3d" className="btn primary" style={{ textDecoration: 'none' }}>
-                Open Universe
-              </Link>
-              <button className="btn">Remix a Story</button>
-            </div>
-          </div>
+          {/* 👇 this is the new sticky portal hero */}
+          <PortalHero />
 
-          {feed.map((p) => (
-            <article key={p.id} className="card post">
-              <header className="postHead">
-                <strong>{p.author}</strong>
-                <span className="muted"> • {p.time}</span>
-              </header>
-              <p className="postText">{p.text}</p>
-              {p.image && (
-                <div className="mediaWrap">
-                  <img src={p.image} alt="placeholder" loading="lazy" decoding="async" />
-                </div>
-              )}
-              <footer className="postActions">
-                <button className="chip">Like</button>
-                <button className="chip">Comment</button>
-                <button className="chip">Share</button>
-              </footer>
-            </article>
-          ))}
+          <div className="sn-card feed" style={{ marginTop: 16 }}>
+            <InfiniteFeed />
+
+            {/* keep a couple static posts for structure */}
+            <Post
+              title="superNova_2177 v0 — design drop"
+              excerpt="Futuristic UI pass with glass cards, neon gradients and structured 3‑pane layout."
+            />
+            <Post
+              title="Weighted governance"
+              excerpt="Tri‑species votes (human / company / ai) balanced for decisive outcomes."
+            />
+            <Post title="3D Mode (beta)" excerpt="Prototype portal to 3D rails — optimized for modern devices." />
+          </div>
         </section>
 
-        {/* RIGHT rail */}
+        {/* Right controls */}
         <aside className="right">
-          <div className="card">
-            <div className="sectionTitle">Identity</div>
+          <div className="sn-card">
+            <div className="section-title">Identity</div>
             <div className="identity">
               {(['human', 'company', 'ai'] as const).map((s) => (
                 <button
@@ -167,17 +160,17 @@ export default function Page() {
             </div>
           </div>
 
-          <div className="card">
-            <div className="sectionTitle">Company Control Center</div>
-            <div className="muted">Spin up spaces, manage proposals, and ship pipelines.</div>
-            <div className="stack">
+          <div className="sn-card">
+            <div className="section-title">Company Control Center</div>
+            <div className="muted">Spin up spaces, manage proposals, and ship execution pipelines.</div>
+            <div className="control">
               <button className="btn primary">Create Company</button>
               <button className="btn">Open Dashboard</button>
             </div>
           </div>
 
-          <div className="card">
-            <div className="sectionTitle">Shortcuts</div>
+          <div className="sn-card">
+            <div className="section-title">Shortcuts</div>
             <div className="stack">
               <button className="btn">New Proposal</button>
               <button className="btn">Start Vote</button>
@@ -187,123 +180,246 @@ export default function Page() {
         </aside>
       </div>
 
-      {/* MOBILE DRAWER */}
-      {drawer && (
-        <>
-          <div className="scrim" onClick={() => setDrawer(false)} />
-          <aside className="drawer">
-            <div className="card profileCard" style={{ marginBottom: 10 }}>
-              <div className="profileRow">
-                <div className="avatar">
-                  <Image src="/icon.png" width={48} height={48} alt="avatar" />
-                </div>
-                <div>
-                  <div className="name">taha_gungor</div>
-                  <div className="muted">artist • test_tech</div>
-                </div>
-              </div>
-            </div>
-            {['Feed', 'Messages', 'Proposals', 'Decisions', 'Execution', 'Companies', 'Settings'].map((l) => (
-              <button key={l} className="btn ghost leftnav" style={{ width: '100%' }}>
-                {l}
-              </button>
-            ))}
-            <button className="btn" style={{ marginTop: 12 }} onClick={() => setDrawer(false)}>
-              Close
-            </button>
-          </aside>
-        </>
-      )}
-
-      {/* THEME */}
+      {/* Design tokens + page styles */}
       <style jsx global>{`
         :root {
-          --bg: #fafafc;     /* weathered white */
-          --panel: #ffffff;  /* cards/panels */
-          --ink: #111827;    /* dark text */
-          --muted: #6b7280;  /* secondary */
-          --stroke: #e5e7eb; /* borders */
-          --pink: #ff2db8;   /* 15% accent */
-          --blue: #4f46e5;   /* 5% accent */
+          --sn-bg: #0b0e13;
+          --sn-panel: #0f1320;
+          --sn-panel2: #0a0f1a;
+          --sn-card: #111729;
+          --sn-stroke: #1a2336;
+          --sn-text: #e9edf7;
+          --sn-muted: #a1aecf;
+          --sn-accent: #ff2db8;
+          --sn-accent2: #6a5cff;
+          --sn-ring: rgba(255, 45, 184, 0.35);
         }
-        html, body { background: var(--bg); color: var(--ink); }
-        * { box-sizing: border-box; }
+        body {
+          background: var(--sn-bg);
+          color: var(--sn-text);
+        }
       `}</style>
 
       <style jsx>{`
-        .root { min-height: 100vh; }
-
-        /* Topbar */
-        .topbar{
-          position: sticky; top: 0; z-index: 50;
-          display: grid; grid-template-columns: 220px minmax(300px,1fr) 220px;
-          gap: 16px; align-items: center;
-          height: 64px; padding: 12px 16px;
-          border-bottom: 1px solid var(--stroke);
-          background: rgba(255,255,255,.85); backdrop-filter: blur(8px);
+        .sn-root {
+          min-height: 100vh;
+          background:
+            radial-gradient(80% 60% at 0% 0%, rgba(106, 92, 255, 0.1), transparent 60%),
+            radial-gradient(70% 50% at 100% 0%, rgba(255, 45, 184, 0.1), transparent 55%),
+            linear-gradient(180deg, var(--sn-bg), #06070c 80%);
         }
-        .leftCluster{ display:flex; align-items:center; gap:10px; }
-        .brand{ display:inline-flex; align-items:center; gap:10px; font-weight:800; color:var(--ink); text-decoration:none; }
-        .logo{ border-radius:8px; }
-        .iconBtn{ height:40px; min-width:40px; border-radius:12px; border:1px solid var(--stroke); background:var(--panel); color:var(--ink); }
-        .search{ background:var(--panel); border:1px solid var(--stroke); border-radius:12px; height:40px; display:flex; align-items:center; padding:0 12px; }
-        .search input{ flex:1; height:100%; background:transparent; border:0; outline:0; color:var(--ink); font-size:14px; }
-        .actions{ display:flex; justify-content:flex-end; align-items:center; gap:10px; }
-        .avatarBtn{ height:40px; width:40px; border-radius:12px; border:1px solid var(--stroke); background:var(--panel); display:grid; place-items:center; }
-        .avatarMenu{ position:absolute; margin-top:48px; right:16px; background:var(--panel); border:1px solid var(--stroke); border-radius:12px; padding:8px; display:grid; gap:6px; }
-        .avatarMenu a{ color:var(--ink); text-decoration:none; padding:8px 10px; border-radius:8px; }
-        .avatarMenu a:hover{ background:#f6f7fb; }
 
-        /* Shell */
-        .shell{ display:grid; grid-template-columns:260px minmax(0,720px) 320px; gap:20px; padding:22px 16px 64px; max-width:1360px; margin:0 auto; }
-        .left,.right{ display:flex; flex-direction:column; gap:14px; }
-        .card{ background:var(--panel); border:1px solid var(--stroke); border-radius:16px; padding:16px; box-shadow:0 1px 0 #f3f4f6 inset, 0 8px 24px rgba(17,24,39,.04); }
-        .muted{ color:var(--muted); }
-        .sectionTitle{ font-weight:700; margin-bottom:6px; }
+        .sn-topbar {
+          position: sticky;
+          top: 0;
+          z-index: 50;
+          display: grid;
+          grid-template-columns: 1fr 2fr 1fr;
+          gap: 16px;
+          align-items: center;
+          height: 64px;
+          padding: 12px 20px;
+          backdrop-filter: blur(12px);
+          background: linear-gradient(180deg, rgba(10, 12, 20, 0.8), rgba(10, 12, 20, 0.35));
+          border-bottom: 1px solid var(--sn-stroke);
+        }
+        .brand {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          font-weight: 800;
+          letter-spacing: 0.2px;
+        }
+        .brand .logo {
+          border-radius: 9px;
+        }
 
-        .profileRow{ display:flex; gap:12px; align-items:center; }
-        .avatar{ width:48px; height:48px; border-radius:12px; overflow:hidden; border:1px solid var(--stroke); background:#fff; display:grid; place-items:center; }
-        .name{ font-weight:700; }
-        .kpis{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:10px; }
-        .tile{ text-align:center; border-radius:12px; padding:12px 8px; border:1px solid var(--stroke); background:#fff; }
-        .tile .k{ font-weight:800; font-size:18px; }
-        .btn{ height:40px; border-radius:12px; border:1px solid var(--stroke); background:var(--panel); color:var(--ink); padding:0 14px; font-weight:600; }
-        .btn.primary{ background: var(--pink); color:#fff; border:0; }
-        .btn.ghost{ background:#fff; }
-        .navStack .leftnav{ width:100%; text-align:left; margin:6px 0; }
+        .search {
+          background: #111729;
+          border: 1px solid var(--sn-stroke);
+          border-radius: 12px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          padding: 0 12px;
+        }
+        .search input {
+          flex: 1;
+          height: 100%;
+          background: transparent;
+          border: 0;
+          outline: 0;
+          color: var(--sn-text);
+          font-size: 14px;
+        }
 
-        .center{ min-width:0; }
-        .heroIntro{ margin-bottom:14px; }
-        .heroCopy{ margin:10px 0 12px; }
-        .ctaRow{ display:flex; gap:10px; flex-wrap:wrap; }
-        .post{ margin-bottom:14px; }
-        .postHead{ display:flex; align-items:baseline; gap:6px; margin-bottom:8px; }
-        .postText{ margin:6px 0 10px; line-height:1.5; }
-        .mediaWrap{ margin:8px 0; border-radius:12px; overflow:hidden; border:1px solid var(--stroke); }
-        .mediaWrap img{ width:100%; height:auto; display:block; }
-        .postActions{ display:flex; gap:8px; }
-        .chip{ height:34px; border-radius:10px; border:1px solid var(--stroke); background:#fff; color:var(--ink); padding:0 12px; font-weight:600; }
-        .pill{ display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; background:#fff; border:1px solid var(--stroke); font-size:12px; color:var(--muted); }
-        .pill.active{ color:#fff; background:var(--blue); border-color:var(--blue); }
+        .actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          align-items: center;
+        }
+        .btn {
+          height: 40px;
+          border-radius: 12px;
+          border: 1px solid var(--sn-stroke);
+          background: #121a2a;
+          color: var(--sn-text);
+          padding: 0 14px;
+          font-weight: 600;
+        }
+        .btn:hover {
+          box-shadow: 0 0 0 2px var(--sn-ring) inset;
+          border-color: #2a3754;
+        }
+        .btn.primary {
+          background: linear-gradient(90deg, var(--sn-accent), var(--sn-accent2));
+          border: 0;
+          color: #fff;
+        }
 
-        /* Mobile & drawer */
-        .showMobile{ display:none; }
-        @media (max-width:1100px){
-          .shell{ grid-template-columns:minmax(0,1fr); max-width:760px; }
-          .left,.right{ display:none; }
-          .topbar{ grid-template-columns:auto 1fr auto; }
-          .showMobile{ display:inline-flex; }
-          .scrim{
-            position: fixed; inset: 0; background: rgba(0,0,0,.24); z-index: 60;
-            animation: fadeIn .15s ease-out;
+        .avatar-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          height: 40px;
+          border-radius: 12px;
+          border: 1px solid var(--sn-stroke);
+          background: #121a2a;
+          padding: 0 10px;
+        }
+        .avatar-btn .burger {
+          font-weight: 700;
+        }
+        .avatar-menu {
+          position: absolute;
+          margin-top: 48px;
+          right: 20px;
+          background: #0f1422;
+          border: 1px solid var(--sn-stroke);
+          border-radius: 12px;
+          padding: 8px;
+          display: grid;
+          gap: 6px;
+        }
+
+        .sn-grid {
+          display: grid;
+          grid-template-columns: 260px minmax(0, 1fr) 320px;
+          gap: 20px;
+          padding: 24px 20px 64px;
+          max-width: 1320px;
+          margin: 0 auto;
+        }
+
+        .sn-card {
+          background: var(--sn-card);
+          border: 1px solid var(--sn-stroke);
+          border-radius: 16px;
+          padding: 16px;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 10px 30px rgba(0, 0, 0, 0.25);
+        }
+        .muted {
+          color: var(--sn-muted);
+        }
+
+        .left .nav button {
+          width: 100%;
+          text-align: left;
+          background: #12182a;
+          color: var(--sn-text);
+          border: 1px solid var(--sn-stroke);
+          height: 40px;
+          border-radius: 12px;
+          margin: 6px 0;
+        }
+        .left .profile {
+          display: flex;
+          gap: 12px;
+          align-items: center;
+        }
+        .avatar {
+          width: 48px;
+          height: 48px;
+          border-radius: 12px;
+          overflow: hidden;
+          border: 1px solid var(--sn-stroke);
+          background: #0f1626;
+        }
+        .name {
+          font-weight: 700;
+        }
+
+        .kpis {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
+          margin-top: 10px;
+        }
+        .tile {
+          text-align: center;
+          border-radius: 12px;
+          padding: 12px 8px;
+          border: 1px solid var(--sn-stroke);
+          background: #0f1626;
+        }
+        .tile .k {
+          font-weight: 800;
+          font-size: 18px;
+        }
+
+        .feed .post {
+          padding: 14px;
+          border: 1px solid var(--sn-stroke);
+          border-radius: 14px;
+          background: #0f1422;
+          margin-bottom: 12px;
+        }
+
+        .section-title {
+          font-weight: 700;
+          margin-bottom: 6px;
+        }
+        .identity {
+          display: flex;
+          gap: 8px;
+        }
+        .pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 10px;
+          border-radius: 999px;
+          background: #0f1626;
+          border: 1px solid var(--sn-stroke);
+          font-size: 12px;
+          color: var(--sn-muted);
+        }
+        .pill.active {
+          color: #fff;
+          border-color: #323f5e;
+          box-shadow: 0 0 0 2px var(--sn-ring) inset;
+        }
+
+        .right .control .btn {
+          width: 100%;
+          height: 42px;
+          border-radius: 12px;
+          margin-top: 8px;
+        }
+        .stack {
+          display: grid;
+          gap: 8px;
+        }
+
+        @media (max-width: 1100px) {
+          .sn-grid {
+            grid-template-columns: 1fr;
           }
-          .drawer{
-            position: fixed; inset: 0 20% 0 0; z-index: 61; background: var(--panel);
-            border-right: 1px solid var(--stroke); padding: 16px; overflow-y: auto;
-            animation: slideIn .18s ease-out;
+          .right,
+          .left {
+            display: none;
           }
-          @keyframes slideIn { from { transform: translateX(-12px); opacity:.8; } to { transform:none; opacity:1; } }
-          @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
         }
       `}</style>
     </main>
