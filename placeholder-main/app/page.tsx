@@ -8,6 +8,7 @@ import dynamic from 'next/dynamic';
 
 // 3D hero (no SSR)
 const PortalHero = dynamic(() => import('@/components/PortalHero'), { ssr: false });
+import PostComposer from '@/components/PostComposer';
 
 type Post = {
   id: string;
@@ -258,6 +259,8 @@ export default function Page() {
               <button className="btn">Remix a Universe</button>
             </div>
           </div>
+
+          <PostComposer />
 
           {/* feed */}
           {items.map((p) => (
