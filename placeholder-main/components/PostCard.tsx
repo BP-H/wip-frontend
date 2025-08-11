@@ -24,9 +24,14 @@ export default function PostCard({
   const handleReact = onReact ?? (() => {});
 
   // Safe, descriptive alt text
-  const imgAlt =
-    (typeof p.text === 'string' && p.text.trim().slice(0, 80)) ||
-    (p.author?.name ? `${p.author.name}'s post image` : 'post image');
+  const imgAlt: string =
+    typeof p.alt === 'string' && p.alt.trim()
+      ? p.alt.trim()
+      : typeof p.text === 'string' && p.text.trim()
+      ? p.text.trim().slice(0, 80)
+      : p.author?.name
+      ? `${p.author.name}'s post image`
+      : 'post image';
 
   // Deterministic seed for 3D (varies per post but stable)
   const threeSeed = String(p.id ?? Math.random());
