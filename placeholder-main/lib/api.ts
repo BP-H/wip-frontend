@@ -1,24 +1,29 @@
 // lib/api.ts
 const BASE = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000';
 
+async function request(path: string, init: RequestInit = {}) {
+  try {
+    const r = await fetch(`${BASE}${path}`, { cache: 'no-store', ...init });
+    if (!r.ok) throw new Error(`${path} failed`);
+    return r.json();
+  } catch (err) {
+    console.error(err);
+    throw err instanceof Error ? err : new Error(String(err));
+  }
+}
+
 export async function getStatus() {
-  const r = await fetch(`${BASE}/status`, { cache: 'no-store' });
-  if (!r.ok) throw new Error('status failed');
-  return r.json();
+  return request('/status');
 }
 
 export async function getEntropy() {
-  const r = await fetch(`${BASE}/system/collective-entropy`, { cache: 'no-store' });
-  if (!r.ok) throw new Error('entropy failed');
-  return r.json();
+  return request('/system/collective-entropy');
 }
 
 export async function aiAssist(vibenodeId: number, prompt: string, token: string) {
-  const r = await fetch(`${BASE}/ai-assist/${vibenodeId}`, {
+  return request(`/ai-assist/${vibenodeId}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ prompt }),
   });
-  if (!r.ok) throw new Error('ai-assist failed');
-  return r.json();
 }
