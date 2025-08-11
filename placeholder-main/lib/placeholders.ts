@@ -12,5 +12,6 @@ const videos = [
 ];
 
 export function placeholderVideo(i: number) {
-  return videos[i % videos.length];
+  const idx = ((i % videos.length) + videos.length) % videos.length;
+  return videos[idx];
 }

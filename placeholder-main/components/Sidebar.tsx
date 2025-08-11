@@ -69,6 +69,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     <div className={`${styles.shell} ${open ? styles.open : ""}`}>
       {/* backdrop is a button for a11y */}
       <button
+        type="button"
         className={styles.backdrop}
         aria-label="Close sidebar"
         onClick={onClose}
@@ -83,7 +84,12 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         <header className={styles.header}>
           <div className={styles.logo}>SN</div>
           <div className={styles.title}>Command Center</div>
-          <button className={styles.close} onClick={onClose} aria-label="Close">
+          <button
+            type="button"
+            className={styles.close}
+            onClick={onClose}
+            aria-label="Close"
+          >
             ✕
           </button>
         </header>
@@ -112,6 +118,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             const on = !!enabled[a.key];
             return (
               <button
+                type="button"
                 key={a.key}
                 className={`${styles.agent} ${on ? styles.agentOn : ""}`}
                 onClick={() => toggle(a.key)}

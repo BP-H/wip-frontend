@@ -14,12 +14,12 @@ async function json<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
 
 export const api = {
   // Tries a few common agent endpoints; falls back gracefully
-  async listAgents(): Promise<Agent[]> {
+  async listAgents(signal?: AbortSignal): Promise<Agent[]> {
     if (!BASE) throw new Error("No API base set");
     const paths = ["/agents", "/ai/personas", "/api/agents", "/api/personas"];
     for (const p of paths) {
       try {
-        const r = await json<any>(`${BASE}${p}`);
+        const r = await json<any>(`${BASE}${p}`, { signal });
         // normalize a little:
         if (Array.isArray(r)) return r as Agent[];
         if (Array.isArray(r?.results)) return r.results as Agent[];
