@@ -20,7 +20,7 @@ export default function PostCard({
   onReact,
 }: {
   post: Post;
-  onReact?: (prev: string | null, next: string) => void;
+  onReact?: (prev: string | null, next: string | null) => void;
 }) {
   const p = post as unknown as AnyObj; // tolerate partial data without exploding
   const handleReact = onReact ?? (() => {});
