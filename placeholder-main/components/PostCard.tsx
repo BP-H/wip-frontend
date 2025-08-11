@@ -13,8 +13,6 @@ const Mini3D = dynamic(() => import('./Mini3D'), {
   loading: () => <div className="min3d-skeleton" aria-label="Loading 3D…" />,
 });
 
-type AnyObj = Record<string, any>;
-
 export default function PostCard({
   post,
   onReact,
@@ -22,7 +20,7 @@ export default function PostCard({
   post: Post;
   onReact?: (prev: string | null, next: string) => void;
 }) {
-  const p = post as unknown as AnyObj; // tolerate partial data without exploding
+  const p = post as Partial<Post>; // tolerate partial data without exploding
   const handleReact = onReact ?? (() => {});
 
   // Safe, descriptive alt text
@@ -70,7 +68,7 @@ export default function PostCard({
       <footer className={styles.footer}>
         <ReactionBar
           postId={String(post.id)}       // <- no “unknown as string”
-          counts={(p.reactions as AnyObj) ?? {}}
+          counts={p.reactions ?? {}}
           onChange={handleReact}
         />
         <button className="sn-btn" type="button">Comment</button>
