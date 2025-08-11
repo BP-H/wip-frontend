@@ -9,7 +9,14 @@ import dynamic from 'next/dynamic';
 // 3D hero (no SSR)
 const PortalHero = dynamic(() => import('@/components/PortalHero'), { ssr: false });
 
-type Post = { id: string; author: string; text: string; time: string; image?: string };
+type Post = {
+  id: string;
+  author: string;
+  text: string;
+  time: string;
+  image?: string;
+  alt?: string;
+};
 
 // demo feed
 function makeBatch(offset: number, size = 10): Post[] {
@@ -262,7 +269,12 @@ export default function Page() {
               <p className="postText">{p.text}</p>
               {p.image && (
                 <div className="mediaWrap">
-                  <img src={p.image} alt="" loading="lazy" decoding="async" />
+                  <img
+                    src={p.image}
+                    alt={(p.alt || p.text || 'Post image').slice(0, 80)}
+                    loading="lazy"
+                    decoding="async"
+                  />
                 </div>
               )}
               <footer className="postActions">
