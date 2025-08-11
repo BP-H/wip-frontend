@@ -9,32 +9,38 @@ const PortalHero = dynamic(() => import('@/components/PortalHero'), { ssr: false
 
 type PostItem = { id: string; author: string; time: string; text: string; image?: string };
 
-function makeDemoFeed(n = 12): PostItem[] {
+function makeDemoFeed(n = 14): PostItem[] {
   return Array.from({ length: n }).map((_, i) => ({
     id: String(i + 1),
     author: ['@proto_ai', '@neonfork', '@superNova_2177'][i % 3],
     time: new Date(Date.now() - i * 1000 * 60 * 7).toLocaleString(),
     text:
       i % 4 === 0
-        ? 'Low‑poly moment — rotating differently in each instance as you scroll.'
+        ? 'Low-poly moment — rotating differently in each instance as you scroll.'
         : 'Prototype feed — symbolic demo copy for layout testing.',
     image: i % 2 === 0 ? `https://picsum.photos/seed/white_${i}/960/540` : undefined,
   }));
 }
 
 export default function Page() {
-  const [species, setSpecies] = useState<'human' | 'company' | 'ai'>('human');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [drawer, setDrawer] = useState(false); // mobile sidebar
+  const [species, setSpecies] = useState<'human' | 'company' | 'ai'>('human');
   const feed = useMemo(() => makeDemoFeed(16), []);
 
   return (
     <main className="root">
-      {/* sticky header */}
+      {/* Sticky top bar */}
       <header className="topbar">
-        <Link href="/" className="brand" aria-label="superNova_2177">
-          <Image src="/icon.png" width={28} height={28} alt="app" className="logo" />
-          <b>superNova_2177</b>
-        </Link>
+        <div className="leftCluster">
+          <button className="iconBtn showMobile" aria-label="Open menu" onClick={() => setDrawer(true)}>
+            ☰
+          </button>
+          <Link href="/" className="brand" aria-label="home">
+            <Image src="/icon.png" width={28} height={28} alt="app" className="logo" />
+            <b>superNova_2177</b>
+          </Link>
+        </div>
 
         <div className="search">
           <input placeholder="Search posts, people, companies…" aria-label="Search" />
@@ -53,21 +59,28 @@ export default function Page() {
           >
             <Image src="/icon.png" width={28} height={28} alt="Profile" />
           </button>
-
-        {menuOpen && (
-          <div role="menu" className="avatarMenu" onMouseLeave={() => setMenuOpen(false)}>
-            <Link href="/profile" role="menuitem">Profile</Link>
-            <Link href="/settings" role="menuitem">Settings</Link>
-            <Link href="/proposals" role="menuitem">Proposals</Link>
-            <a href="https://vercel.com" role="menuitem">Deploy</a>
-          </div>
-        )}
+          {menuOpen && (
+            <div role="menu" className="avatarMenu" onMouseLeave={() => setMenuOpen(false)}>
+              <Link href="/profile" role="menuitem">
+                Profile
+              </Link>
+              <Link href="/settings" role="menuitem">
+                Settings
+              </Link>
+              <Link href="/proposals" role="menuitem">
+                Proposals
+              </Link>
+              <a href="https://vercel.com" role="menuitem">
+                Deploy
+              </a>
+            </div>
+          )}
         </div>
       </header>
 
-      {/* shell */}
+      {/* App shell */}
       <div className="shell">
-        {/* left rail */}
+        {/* LEFT rail (desktop) */}
         <aside className="left">
           <div className="card profileCard">
             <div className="profileRow">
@@ -83,7 +96,9 @@ export default function Page() {
 
           <nav className="card navStack">
             {['Feed', 'Messages', 'Proposals', 'Decisions', 'Execution', 'Companies', 'Settings'].map((l) => (
-              <button key={l} className="btn ghost leftnav">{l}</button>
+              <button key={l} className="btn ghost leftnav">
+                {l}
+              </button>
             ))}
           </nav>
 
@@ -97,16 +112,18 @@ export default function Page() {
           </div>
         </aside>
 
-        {/* center */}
+        {/* CENTER */}
         <section className="center">
-          {/* the sticky/scroll‑compressing hero */}
           <div className="card heroIntro">
-            <PortalHero title="Enter universe — tap to interact" logoSrc="/icon.png" />
+            <PortalHero title="Enter the portal — tap to interact" logoSrc="/icon.png" />
             <p className="muted heroCopy">
-              Minimal, white UI with subtle pink/blue accents. Humans • AIs • Companies participate as peers.
+              Minimal white interface with separate accents (pink/blue). Sticky portal compresses smoothly and stays on
+              top on mobile.
             </p>
             <div className="ctaRow">
-              <Link href="/3d" className="btn primary" style={{ textDecoration: 'none' }}>Open Universe</Link>
+              <Link href="/3d" className="btn primary" style={{ textDecoration: 'none' }}>
+                Open Universe
+              </Link>
               <button className="btn">Remix a Story</button>
             </div>
           </div>
@@ -132,7 +149,7 @@ export default function Page() {
           ))}
         </section>
 
-        {/* right */}
+        {/* RIGHT rail */}
         <aside className="right">
           <div className="card">
             <div className="sectionTitle">Identity</div>
@@ -170,30 +187,65 @@ export default function Page() {
         </aside>
       </div>
 
-      {/* theme */}
+      {/* MOBILE DRAWER */}
+      {drawer && (
+        <>
+          <div className="scrim" onClick={() => setDrawer(false)} />
+          <aside className="drawer">
+            <div className="card profileCard" style={{ marginBottom: 10 }}>
+              <div className="profileRow">
+                <div className="avatar">
+                  <Image src="/icon.png" width={48} height={48} alt="avatar" />
+                </div>
+                <div>
+                  <div className="name">taha_gungor</div>
+                  <div className="muted">artist • test_tech</div>
+                </div>
+              </div>
+            </div>
+            {['Feed', 'Messages', 'Proposals', 'Decisions', 'Execution', 'Companies', 'Settings'].map((l) => (
+              <button key={l} className="btn ghost leftnav" style={{ width: '100%' }}>
+                {l}
+              </button>
+            ))}
+            <button className="btn" style={{ marginTop: 12 }} onClick={() => setDrawer(false)}>
+              Close
+            </button>
+          </aside>
+        </>
+      )}
+
+      {/* THEME */}
       <style jsx global>{`
         :root {
-          --bg:#fafafc; --panel:#ffffff; --ink:#111827; --muted:#6b7280; --stroke:#e5e7eb;
-          --pink:#ff2db8; --blue:#4f46e5;
+          --bg: #fafafc;     /* weathered white */
+          --panel: #ffffff;  /* cards/panels */
+          --ink: #111827;    /* dark text */
+          --muted: #6b7280;  /* secondary */
+          --stroke: #e5e7eb; /* borders */
+          --pink: #ff2db8;   /* 15% accent */
+          --blue: #4f46e5;   /* 5% accent */
         }
         html, body { background: var(--bg); color: var(--ink); }
         * { box-sizing: border-box; }
       `}</style>
 
       <style jsx>{`
-        .root { min-height:100vh; }
+        .root { min-height: 100vh; }
 
+        /* Topbar */
         .topbar{
           position: sticky; top: 0; z-index: 50;
           display: grid; grid-template-columns: 220px minmax(300px,1fr) 220px;
           gap: 16px; align-items: center;
           height: 64px; padding: 12px 16px;
           border-bottom: 1px solid var(--stroke);
-          backdrop-filter: blur(8px);
-          background: rgba(255,255,255,0.7);
+          background: rgba(255,255,255,.85); backdrop-filter: blur(8px);
         }
+        .leftCluster{ display:flex; align-items:center; gap:10px; }
         .brand{ display:inline-flex; align-items:center; gap:10px; font-weight:800; color:var(--ink); text-decoration:none; }
         .logo{ border-radius:8px; }
+        .iconBtn{ height:40px; min-width:40px; border-radius:12px; border:1px solid var(--stroke); background:var(--panel); color:var(--ink); }
         .search{ background:var(--panel); border:1px solid var(--stroke); border-radius:12px; height:40px; display:flex; align-items:center; padding:0 12px; }
         .search input{ flex:1; height:100%; background:transparent; border:0; outline:0; color:var(--ink); font-size:14px; }
         .actions{ display:flex; justify-content:flex-end; align-items:center; gap:10px; }
@@ -202,9 +254,9 @@ export default function Page() {
         .avatarMenu a{ color:var(--ink); text-decoration:none; padding:8px 10px; border-radius:8px; }
         .avatarMenu a:hover{ background:#f6f7fb; }
 
+        /* Shell */
         .shell{ display:grid; grid-template-columns:260px minmax(0,720px) 320px; gap:20px; padding:22px 16px 64px; max-width:1360px; margin:0 auto; }
         .left,.right{ display:flex; flex-direction:column; gap:14px; }
-
         .card{ background:var(--panel); border:1px solid var(--stroke); border-radius:16px; padding:16px; box-shadow:0 1px 0 #f3f4f6 inset, 0 8px 24px rgba(17,24,39,.04); }
         .muted{ color:var(--muted); }
         .sectionTitle{ font-weight:700; margin-bottom:6px; }
@@ -212,31 +264,46 @@ export default function Page() {
         .profileRow{ display:flex; gap:12px; align-items:center; }
         .avatar{ width:48px; height:48px; border-radius:12px; overflow:hidden; border:1px solid var(--stroke); background:#fff; display:grid; place-items:center; }
         .name{ font-weight:700; }
-
         .kpis{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:10px; }
         .tile{ text-align:center; border-radius:12px; padding:12px 8px; border:1px solid var(--stroke); background:#fff; }
         .tile .k{ font-weight:800; font-size:18px; }
-
         .btn{ height:40px; border-radius:12px; border:1px solid var(--stroke); background:var(--panel); color:var(--ink); padding:0 14px; font-weight:600; }
-        .btn.primary{ background:linear-gradient(90deg, var(--pink), var(--blue)); border:0; color:#fff; }
+        .btn.primary{ background: var(--pink); color:#fff; border:0; }
         .btn.ghost{ background:#fff; }
+        .navStack .leftnav{ width:100%; text-align:left; margin:6px 0; }
 
+        .center{ min-width:0; }
         .heroIntro{ margin-bottom:14px; }
-        .heroCopy{ margin: 10px 0 12px; }
+        .heroCopy{ margin:10px 0 12px; }
         .ctaRow{ display:flex; gap:10px; flex-wrap:wrap; }
-
         .post{ margin-bottom:14px; }
         .postHead{ display:flex; align-items:baseline; gap:6px; margin-bottom:8px; }
-        .postText{ margin: 6px 0 10px; line-height:1.5; }
-        .mediaWrap{ margin:8px 0 8px; border-radius:12px; overflow:hidden; border:1px solid var(--stroke); }
+        .postText{ margin:6px 0 10px; line-height:1.5; }
+        .mediaWrap{ margin:8px 0; border-radius:12px; overflow:hidden; border:1px solid var(--stroke); }
         .mediaWrap img{ width:100%; height:auto; display:block; }
         .postActions{ display:flex; gap:8px; }
         .chip{ height:34px; border-radius:10px; border:1px solid var(--stroke); background:#fff; color:var(--ink); padding:0 12px; font-weight:600; }
+        .pill{ display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; background:#fff; border:1px solid var(--stroke); font-size:12px; color:var(--muted); }
+        .pill.active{ color:#fff; background:var(--blue); border-color:var(--blue); }
 
+        /* Mobile & drawer */
+        .showMobile{ display:none; }
         @media (max-width:1100px){
           .shell{ grid-template-columns:minmax(0,1fr); max-width:760px; }
           .left,.right{ display:none; }
           .topbar{ grid-template-columns:auto 1fr auto; }
+          .showMobile{ display:inline-flex; }
+          .scrim{
+            position: fixed; inset: 0; background: rgba(0,0,0,.24); z-index: 60;
+            animation: fadeIn .15s ease-out;
+          }
+          .drawer{
+            position: fixed; inset: 0 20% 0 0; z-index: 61; background: var(--panel);
+            border-right: 1px solid var(--stroke); padding: 16px; overflow-y: auto;
+            animation: slideIn .18s ease-out;
+          }
+          @keyframes slideIn { from { transform: translateX(-12px); opacity:.8; } to { transform:none; opacity:1; } }
+          @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
         }
       `}</style>
     </main>
