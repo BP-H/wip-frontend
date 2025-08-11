@@ -1,53 +1,100 @@
 'use client';
 
-import Image from 'next/image';
-import { placeholderImage, placeholderVideo } from '@/lib/placeholders';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
-type Media =
-  | { type: 'image'; src: string; width: number; height: number; alt: string }
-  | { type: 'video'; src: string };
+type Post = { id: string; author: string; time: string; text: string; image?: string };
 
-function Card({ idx }: { idx: number }) {
-  const media: Media =
-    idx % 5 === 0
-      ? { type: 'video', src: placeholderVideo(idx) }
-      : { type: 'image', src: placeholderImage(idx, 1200, 720), width: 1200, height: 720, alt: 'placeholder' };
-
-  return (
-    <article className="post">
-      <div style={{ fontWeight: 700, marginBottom: 6 }}>Prototype feed — symbolic demo copy for layout testing.</div>
-
-      {media.type === 'image' ? (
-        <div style={{ position: 'relative', width: '100%', height: 0, paddingBottom: '56%', borderRadius: 12, overflow: 'hidden', marginTop: 8 }}>
-          <Image src={media.src} alt={media.alt} fill style={{ objectFit: 'cover' }} sizes="(max-width: 900px) 100vw, 720px" priority={idx < 2} />
-        </div>
-      ) : (
-        <video
-          src={media.src}
-          muted
-          loop
-          autoPlay
-          playsInline
-          style={{ width: '100%', borderRadius: 12, marginTop: 8, display: 'block' }}
-        />
-      )}
-
-      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-        <button className="btn">Like</button>
-        <button className="btn">Comment</button>
-        <button className="btn">Share</button>
-      </div>
-    </article>
-  );
+function makePosts(from: number, count: number): Post[] {
+  return Array.from({ length: count }).map((_, i) => {
+    const idx = from + i;
+    return {
+      id: String(idx),
+      author: ['@proto_ai', '@neonfork', '@superNova_2177'][idx % 3],
+      time: new Date(Date.now() - idx * 1000 * 90).toLocaleString(),
+      text:
+        idx % 4 === 0
+          ? 'Low-poly moment — rotating differently in each instance as you scroll.'
+          : 'Prototype feed — symbolic demo copy for layout testing.',
+      image: idx % 2 === 0 ? `https://picsum.photos/seed/sn_white_${idx}/960/540` : undefined,
+    };
+  });
 }
 
-export default function InfiniteFeed() {
-  const items = Array.from({ length: 12 }, (_, i) => i);
+export default function InfiniteFeed({
+  pageSize = 8,
+  maxPages = 20, // 160 posts demo
+}: {
+  pageSize?: number;
+  maxPages?: number;
+}) {
+  const [page, setPage] = useState(1);
+  const [items, setItems] = useState<Post[]>(() => makePosts(0, pageSize));
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!sentinelRef.current) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (!hasMore || loading) return;
+        const first = entries[0];
+        if (first.isIntersecting) {
+          setLoading(true);
+          // fake fetch
+          setTimeout(() => {
+            const nextPage = page + 1;
+            const start = (nextPage - 1) * pageSize;
+            const next = makePosts(start, pageSize);
+            setItems((prev) => prev.concat(next));
+            setPage(nextPage);
+            setHasMore(nextPage < maxPages);
+            setLoading(false);
+          }, 350);
+        }
+      },
+      { rootMargin: '600px 0px' } // load before we hit the end
+    );
+
+    io.observe(sentinelRef.current);
+    return () => io.disconnect();
+  }, [page, pageSize, maxPages, loading, hasMore]);
+
   return (
     <>
-      {items.map((i) => (
-        <Card key={i} idx={i} />
+      {items.map((p) => (
+        <article key={p.id} className="card post">
+          <header className="postHead">
+            <strong>{p.author}</strong>
+            <span className="muted"> • {p.time}</span>
+          </header>
+          <p className="postText">{p.text}</p>
+          {p.image && (
+            <div className="mediaWrap">
+              <img src={p.image} alt="placeholder" loading="lazy" decoding="async" />
+            </div>
+          )}
+          <footer className="postActions">
+            <button className="chip">Like</button>
+            <button className="chip">Comment</button>
+            <button className="chip">Share</button>
+          </footer>
+        </article>
       ))}
+
+      <div ref={sentinelRef} />
+
+      {loading && (
+        <div className="card" aria-live="polite">
+          Loading more…
+        </div>
+      )}
+
+      {!hasMore && (
+        <div className="muted" style={{ textAlign: 'center', padding: 12 }}>
+          You’re all caught up ✨
+        </div>
+      )}
     </>
   );
 }
