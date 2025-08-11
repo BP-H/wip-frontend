@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type Post = { id: string; author: string; time: string; text: string; image?: string };
 
 function makePosts(from: number, count: number): Post[] {
-  return Array.from({ length: count }).map((_, i) => {
+  return Array.from({ length: count }, (_, i) => {
     const idx = from + i;
     return {
       id: String(idx),
