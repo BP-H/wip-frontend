@@ -42,7 +42,11 @@ export default function PostCard({
       <header className={styles.header}>
         {post.author?.avatar ? (
           // using <img> to avoid Next/Image config for now
-          <img className={styles.avatar} src={post.author.avatar} alt="" />
+          <img
+            className={styles.avatar}
+            src={post.author.avatar}
+            alt={`${post.author?.name ?? 'anon'} avatar`}
+          />
         ) : (
           <div className={styles.avatar} aria-hidden />
         )}
