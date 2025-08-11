@@ -1,7 +1,7 @@
 // components/RemixPicker.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 type Props = {
   open: boolean;
@@ -19,6 +19,11 @@ const ALL_APIS = [
 
 export default function RemixPicker({ open, onClose, onConfirm }: Props) {
   const [selected, setSelected] = useState<string[]>([]);
+  useEffect(() => {
+    if (!open) {
+      setSelected([]);
+    }
+  }, [open]);
   if (!open) return null;
 
   function toggle(name: string) {
