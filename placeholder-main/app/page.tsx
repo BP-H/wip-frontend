@@ -1,427 +1,188 @@
+// app/page.tsx
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import dynamic from 'next/dynamic';
-import InfiniteFeed from '@/components/InfiniteFeed';
-
-const PortalHero = dynamic(() => import('@/components/PortalHero'), { ssr: false });
-
-function NavButton({ label }: { label: string }) {
-  return <button className="btn">{label}</button>;
-}
-
-function Post({ title, excerpt }: { title: string; excerpt: string }) {
-  return (
-    <div className="post">
-      <div style={{ fontWeight: 700 }}>{title}</div>
-      <div className="muted">{excerpt}</div>
-    </div>
-  );
-}
+import { useEffect, useState } from 'react';
+import PortalHero from '@/components/ai/PortalHero';
 
 export default function Page() {
-  const [species, setSpecies] = useState<'human' | 'company' | 'ai'>('human');
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Close drawer on ESC
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setDrawerOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   return (
-    <main className="sn-root">
+    <>
       {/* Top bar */}
-      <header className="sn-topbar">
+      <header className="topbar" role="banner">
+        <button
+          className="menuBtn"
+          aria-label="Open navigation"
+          aria-controls="mobile-drawer"
+          aria-expanded={drawerOpen}
+          onClick={() => setDrawerOpen(true)}
+        >
+          ☰
+        </button>
         <div className="brand">
-          <Image src="/icon.png" width={28} height={28} alt="superNova_2177" className="logo" />
-          <b>superNova_2177</b>
+          <img src="/icon.png" alt="superNova logo" width={28} height={28} />
+          <strong>superNova_2177</strong>
         </div>
-
-        <div className="search">
-          <input placeholder="Search posts, people, companies…" aria-label="Search" />
-        </div>
-
-        <div className="actions">
-          <button className="btn">Create post</button>
-          <Link href="/3d" className="btn primary" style={{ textDecoration: 'none' }}>
-            Launch 3D (beta)
-          </Link>
-
-          {/* Avatar -> burger */}
-          <button
-            className="avatar-btn"
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((v) => !v)}
-            title="Open profile"
-          >
-            <Image src="/icon.png" width={28} height={28} alt="Profile" />
-            <span className="burger" aria-hidden>
-              ≡
-            </span>
-          </button>
-          {menuOpen && (
-            <div role="menu" className="avatar-menu">
-              <Link href="/profile" role="menuitem">
-                Profile
-              </Link>
-              <Link href="/settings" role="menuitem">
-                Settings
-              </Link>
-              <Link href="/proposals" role="menuitem">
-                Proposals
-              </Link>
-              <a href="https://vercel.com" role="menuitem">
-                Deploy
-              </a>
-            </div>
-          )}
-        </div>
+        <div />
       </header>
 
-      {/* 3‑column layout */}
-      <div className="sn-grid">
-        {/* Left nav */}
-        <aside className="left">
-          <div className="sn-card">
-            <div className="profile">
-              <div className="avatar">
-                <Image src="/icon.png" width={48} height={48} alt="avatar" />
-              </div>
-              <div>
-                <div className="name">taha_gungor</div>
-                <div className="muted">artist • test_tech</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="sn-card nav">
-            <NavButton label="Feed" />
-            <NavButton label="Messages" />
-            <NavButton label="Proposals" />
-            <NavButton label="Decisions" />
-            <NavButton label="Execution" />
-            <NavButton label="Companies" />
-            <NavButton label="Settings" />
-          </div>
-
-          <div className="sn-card">
-            <div className="muted">Quick stats</div>
-            <div className="kpis">
-              <div className="tile">
-                <div className="k">2,302</div>
-                <div className="muted">Profile views</div>
-              </div>
-              <div className="tile">
-                <div className="k">1,542</div>
-                <div className="muted">Post reach</div>
-              </div>
-              <div className="tile">
-                <div className="k">12</div>
-                <div className="muted">Companies</div>
-              </div>
-            </div>
-          </div>
+      {/* Layout grid */}
+      <div className="layout">
+        <aside className="rail leftRail" aria-label="Primary">
+          <nav>
+            <a href="#">Home</a>
+            <a href="#">Explore</a>
+            <a href="#">Enter Metaverse</a>
+            <a href="#">Profile</a>
+          </nav>
         </aside>
 
-        {/* Main content */}
-        <section className="center">
-          {/* 👇 this is the new sticky portal hero */}
-          <PortalHero />
+        <main className="feed">
+          {/* Sticky hero: outer is sticky, transforms happen on inner child */}
+          <section className="heroWrap">
+            <PortalHero />
+          </section>
 
-          <div className="sn-card feed" style={{ marginTop: 16 }}>
-            <InfiniteFeed />
+          {/* Example content */}
+          <section aria-label="Feed" className="cards">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <article key={i} className="card">
+                <h3>Post #{i + 1}</h3>
+                <p>
+                  Minimal white UI with pink (<span className="chip pink">#ff2db8</span>) and blue
+                  (<span className="chip blue">#4f46e5</span>) accents.
+                </p>
+                <img
+                  src="https://picsum.photos/seed/snova2177/960/540"
+                  alt="placeholder"
+                  loading="lazy"
+                />
+              </article>
+            ))}
+          </section>
+        </main>
 
-            {/* keep a couple static posts for structure */}
-            <Post
-              title="superNova_2177 v0 — design drop"
-              excerpt="Futuristic UI pass with glass cards, neon gradients and structured 3‑pane layout."
-            />
-            <Post
-              title="Weighted governance"
-              excerpt="Tri‑species votes (human / company / ai) balanced for decisive outcomes."
-            />
-            <Post title="3D Mode (beta)" excerpt="Prototype portal to 3D rails — optimized for modern devices." />
-          </div>
-        </section>
-
-        {/* Right controls */}
-        <aside className="right">
-          <div className="sn-card">
-            <div className="section-title">Identity</div>
-            <div className="identity">
-              {(['human', 'company', 'ai'] as const).map((s) => (
-                <button
-                  key={s}
-                  className={`pill ${species === s ? 'active' : ''}`}
-                  onClick={() => setSpecies(s)}
-                  aria-pressed={species === s}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="sn-card">
-            <div className="section-title">Company Control Center</div>
-            <div className="muted">Spin up spaces, manage proposals, and ship execution pipelines.</div>
-            <div className="control">
-              <button className="btn primary">Create Company</button>
-              <button className="btn">Open Dashboard</button>
-            </div>
-          </div>
-
-          <div className="sn-card">
-            <div className="section-title">Shortcuts</div>
-            <div className="stack">
-              <button className="btn">New Proposal</button>
-              <button className="btn">Start Vote</button>
-              <button className="btn">Invite Member</button>
-            </div>
+        <aside className="rail rightRail" aria-label="Secondary">
+          <div className="panel">
+            <h4>Who to follow</h4>
+            <ul>
+              <li><a href="#">ae-User</a></li>
+              <li><a href="#">nova-bot</a></li>
+              <li><a href="#">portal-dev</a></li>
+            </ul>
           </div>
         </aside>
       </div>
 
-      {/* Design tokens + page styles */}
-      <style jsx global>{`
-        :root {
-          --sn-bg: #0b0e13;
-          --sn-panel: #0f1320;
-          --sn-panel2: #0a0f1a;
-          --sn-card: #111729;
-          --sn-stroke: #1a2336;
-          --sn-text: #e9edf7;
-          --sn-muted: #a1aecf;
-          --sn-accent: #ff2db8;
-          --sn-accent2: #6a5cff;
-          --sn-ring: rgba(255, 45, 184, 0.35);
+      {/* Mobile drawer + scrim */}
+      <div
+        id="mobile-drawer"
+        role="dialog"
+        aria-modal="true"
+        className={`drawer ${drawerOpen ? 'open' : ''}`}
+      >
+        <nav>
+          <button className="close" onClick={() => setDrawerOpen(false)} aria-label="Close menu">
+            ×
+          </button>
+          <a href="#" onClick={() => setDrawerOpen(false)}>Home</a>
+          <a href="#" onClick={() => setDrawerOpen(false)}>Explore</a>
+          <a href="#" onClick={() => setDrawerOpen(false)}>Enter Metaverse</a>
+          <a href="#" onClick={() => setDrawerOpen(false)}>Profile</a>
+        </nav>
+      </div>
+      <div
+        className={`scrim ${drawerOpen ? 'show' : ''}`}
+        onClick={() => setDrawerOpen(false)}
+        aria-hidden={!drawerOpen}
+      />
+
+      <style>{`
+        /* Top bar */
+        .topbar{
+          position:sticky; top:0; z-index:10;
+          display:grid; grid-template-columns:48px 1fr 48px;
+          align-items:center; height:56px; padding:0 12px;
+          background:var(--bg); border-bottom:1px solid #eee;
         }
-        body {
-          background: var(--sn-bg);
-          color: var(--sn-text);
+        .brand{display:flex; gap:10px; align-items:center; font-weight:700}
+        .menuBtn{
+          display:none;
+          border:1px solid #eee; background:#fff; height:36px; width:36px;
+          border-radius:10px;
         }
+        @media (max-width:1100px){ .menuBtn{display:inline-flex; align-items:center; justify-content:center} }
+
+        /* 3-column layout with capped center */
+        .layout{
+          display:grid;
+          grid-template-columns: 1fr min(720px, 100%) 1fr;
+          gap:24px; padding:24px; margin:0 auto; max-width:1400px;
+        }
+        .rail{position:relative}
+        .leftRail nav, .panel{
+          position:sticky; top:80px;
+          padding:16px; border:1px solid #eee; border-radius:16px; background:#fff;
+        }
+        .leftRail a{display:block; padding:10px 8px; border-radius:10px; text-decoration:none; color:var(--ink)}
+        .leftRail a:focus-visible, .leftRail a:hover{background:#f6f6f6; outline:none}
+
+        .feed{min-height:60vh}
+
+        /* Sticky hero on mobile only */
+        .heroWrap{ position:relative; }
+        @media (max-width:768px){
+          .heroWrap{ position:sticky; top:0; z-index:5; background:#fff }
+        }
+
+        /* Content cards */
+        .cards{ display:grid; gap:20px; }
+        .card{
+          border:1px solid #eee; border-radius:18px; padding:16px; background:#fff;
+        }
+        .card img{ width:100%; height:auto; border-radius:12px; display:block; }
+        .chip{ font-family:monospace; padding:2px 6px; border-radius:8px; background:#f5f5f5 }
+        .chip.pink{ color:var(--pink) }
+        .chip.blue{ color:var(--blue) }
+
+        .rightRail .panel h4{ margin:0 0 8px 0 }
+        .rightRail .panel ul{ margin:0; padding:0; list-style:none }
+        .rightRail .panel li + li{ margin-top:6px }
+
+        /* Collapse rails <=1100px */
+        @media (max-width:1100px){
+          .layout{ grid-template-columns: minmax(0, 1fr); }
+          .leftRail, .rightRail{ display:none; }
+        }
+
+        /* Drawer + scrim */
+        .drawer{
+          position:fixed; left:0; top:0; bottom:0; width:280px;
+          transform:translateX(-100%);
+          transition:transform 260ms ease;
+          z-index:60; background:#fff; border-right:1px solid #eee;
+          padding:16px; overflow-y:auto;
+        }
+        .drawer nav a{ display:block; padding:12px 10px; border-radius:10px; color:var(--ink); text-decoration:none }
+        .drawer nav a:hover{ background:#f6f6f6 }
+        .drawer .close{
+          border:none; background:#fff; font-size:28px; line-height:1; padding:0 0 8px 0;
+        }
+        .drawer.open{ transform:translateX(0) }
+        .scrim{
+          position:fixed; inset:0; background:rgba(0,0,0,.0);
+          opacity:0; pointer-events:none; transition:opacity 200ms ease; z-index:50;
+        }
+        .scrim.show{ background:rgba(0,0,0,.45); opacity:1; pointer-events:auto; }
       `}</style>
-
-      <style jsx>{`
-        .sn-root {
-          min-height: 100vh;
-          background:
-            radial-gradient(80% 60% at 0% 0%, rgba(106, 92, 255, 0.1), transparent 60%),
-            radial-gradient(70% 50% at 100% 0%, rgba(255, 45, 184, 0.1), transparent 55%),
-            linear-gradient(180deg, var(--sn-bg), #06070c 80%);
-        }
-
-        .sn-topbar {
-          position: sticky;
-          top: 0;
-          z-index: 50;
-          display: grid;
-          grid-template-columns: 1fr 2fr 1fr;
-          gap: 16px;
-          align-items: center;
-          height: 64px;
-          padding: 12px 20px;
-          backdrop-filter: blur(12px);
-          background: linear-gradient(180deg, rgba(10, 12, 20, 0.8), rgba(10, 12, 20, 0.35));
-          border-bottom: 1px solid var(--sn-stroke);
-        }
-        .brand {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          font-weight: 800;
-          letter-spacing: 0.2px;
-        }
-        .brand .logo {
-          border-radius: 9px;
-        }
-
-        .search {
-          background: #111729;
-          border: 1px solid var(--sn-stroke);
-          border-radius: 12px;
-          height: 40px;
-          display: flex;
-          align-items: center;
-          padding: 0 12px;
-        }
-        .search input {
-          flex: 1;
-          height: 100%;
-          background: transparent;
-          border: 0;
-          outline: 0;
-          color: var(--sn-text);
-          font-size: 14px;
-        }
-
-        .actions {
-          display: flex;
-          justify-content: flex-end;
-          gap: 10px;
-          align-items: center;
-        }
-        .btn {
-          height: 40px;
-          border-radius: 12px;
-          border: 1px solid var(--sn-stroke);
-          background: #121a2a;
-          color: var(--sn-text);
-          padding: 0 14px;
-          font-weight: 600;
-        }
-        .btn:hover {
-          box-shadow: 0 0 0 2px var(--sn-ring) inset;
-          border-color: #2a3754;
-        }
-        .btn.primary {
-          background: linear-gradient(90deg, var(--sn-accent), var(--sn-accent2));
-          border: 0;
-          color: #fff;
-        }
-
-        .avatar-btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          height: 40px;
-          border-radius: 12px;
-          border: 1px solid var(--sn-stroke);
-          background: #121a2a;
-          padding: 0 10px;
-        }
-        .avatar-btn .burger {
-          font-weight: 700;
-        }
-        .avatar-menu {
-          position: absolute;
-          margin-top: 48px;
-          right: 20px;
-          background: #0f1422;
-          border: 1px solid var(--sn-stroke);
-          border-radius: 12px;
-          padding: 8px;
-          display: grid;
-          gap: 6px;
-        }
-
-        .sn-grid {
-          display: grid;
-          grid-template-columns: 260px minmax(0, 1fr) 320px;
-          gap: 20px;
-          padding: 24px 20px 64px;
-          max-width: 1320px;
-          margin: 0 auto;
-        }
-
-        .sn-card {
-          background: var(--sn-card);
-          border: 1px solid var(--sn-stroke);
-          border-radius: 16px;
-          padding: 16px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 10px 30px rgba(0, 0, 0, 0.25);
-        }
-        .muted {
-          color: var(--sn-muted);
-        }
-
-        .left .nav button {
-          width: 100%;
-          text-align: left;
-          background: #12182a;
-          color: var(--sn-text);
-          border: 1px solid var(--sn-stroke);
-          height: 40px;
-          border-radius: 12px;
-          margin: 6px 0;
-        }
-        .left .profile {
-          display: flex;
-          gap: 12px;
-          align-items: center;
-        }
-        .avatar {
-          width: 48px;
-          height: 48px;
-          border-radius: 12px;
-          overflow: hidden;
-          border: 1px solid var(--sn-stroke);
-          background: #0f1626;
-        }
-        .name {
-          font-weight: 700;
-        }
-
-        .kpis {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 12px;
-          margin-top: 10px;
-        }
-        .tile {
-          text-align: center;
-          border-radius: 12px;
-          padding: 12px 8px;
-          border: 1px solid var(--sn-stroke);
-          background: #0f1626;
-        }
-        .tile .k {
-          font-weight: 800;
-          font-size: 18px;
-        }
-
-        .feed .post {
-          padding: 14px;
-          border: 1px solid var(--sn-stroke);
-          border-radius: 14px;
-          background: #0f1422;
-          margin-bottom: 12px;
-        }
-
-        .section-title {
-          font-weight: 700;
-          margin-bottom: 6px;
-        }
-        .identity {
-          display: flex;
-          gap: 8px;
-        }
-        .pill {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          padding: 6px 10px;
-          border-radius: 999px;
-          background: #0f1626;
-          border: 1px solid var(--sn-stroke);
-          font-size: 12px;
-          color: var(--sn-muted);
-        }
-        .pill.active {
-          color: #fff;
-          border-color: #323f5e;
-          box-shadow: 0 0 0 2px var(--sn-ring) inset;
-        }
-
-        .right .control .btn {
-          width: 100%;
-          height: 42px;
-          border-radius: 12px;
-          margin-top: 8px;
-        }
-        .stack {
-          display: grid;
-          gap: 8px;
-        }
-
-        @media (max-width: 1100px) {
-          .sn-grid {
-            grid-template-columns: 1fr;
-          }
-          .right,
-          .left {
-            display: none;
-          }
-        }
-      `}</style>
-    </main>
+    </>
   );
 }
