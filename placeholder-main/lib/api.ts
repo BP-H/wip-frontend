@@ -12,10 +12,13 @@ export type Agent = {
 export class ApiError extends Error {
   readonly status: number;
   readonly url: string;
-  readonly body?: string;
+  readonly body?: unknown;
 
-  constructor(url: string, status: number, statusText: string, body?: string) {
-    super(`${url} failed: ${status} ${statusText}${body ? ` - ${body}` : ''}`);
+  constructor(url: string, status: number, statusText: string, body?: unknown) {
+    const bodyStr = body === undefined
+      ? ''
+      : ` - ${typeof body === 'string' ? body : JSON.stringify(body)}`;
+    super(`${url} failed: ${status} ${statusText}${bodyStr}`);
     this.name = 'ApiError';
     this.status = status;
     this.url = url;
@@ -23,7 +26,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T = any>(path: string, init: RequestInit = {}): Promise<T> {
+async function request<T = any>(path: string, init: RequestInit = {}): Promise<T | string> {
   const url = `${BASE}${path.startsWith('/') ? '' : '/'}${path}`;
   let res: Response;
 
@@ -34,18 +37,20 @@ async function request<T = any>(path: string, init: RequestInit = {}): Promise<T
     throw new Error(`${url} request failed: ${msg}`);
   }
 
+  const contentType = res.headers.get('Content-Type') || '';
+  const isJson = contentType.includes('application/json');
+
   if (!res.ok) {
-    let body: string | undefined;
+    let body: unknown;
     try {
-      body = await res.text();
+      body = isJson ? await res.json() : await res.text();
     } catch {
       // ignore body read errors
     }
     throw new ApiError(url, res.status, res.statusText, body);
   }
 
-  // Expect JSON responses from our backend
-  return res.json() as Promise<T>;
+  return isJson ? (res.json() as Promise<T>) : res.text();
 }
 
 const AGENTS_BASE = process.env.NEXT_PUBLIC_API_BASE || '';
