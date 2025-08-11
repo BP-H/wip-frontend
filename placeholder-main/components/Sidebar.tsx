@@ -127,12 +127,54 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
 
         <div className={styles.sectionLabel}>Connect APIs</div>
         <div className={styles.connectGrid}>
-          <Link href="https://github.com/new" target="_blank" className={styles.connector}>GitHub</Link>
-          <Link href="https://platform.openai.com/" target="_blank" className={styles.connector}>OpenAI</Link>
-          <Link href="https://vercel.com/integrations" target="_blank" className={styles.connector}>Vercel</Link>
-          <Link href="https://supabase.com/" target="_blank" className={styles.connector}>Supabase</Link>
-          <Link href="https://stripe.com/" target="_blank" className={styles.connector}>Stripe</Link>
-          <Link href="https://console.cloud.google.com/" target="_blank" className={styles.connector}>Google Cloud</Link>
+          <Link
+            href="https://github.com/new"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.connector}
+          >
+            GitHub
+          </Link>
+          <Link
+            href="https://platform.openai.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.connector}
+          >
+            OpenAI
+          </Link>
+          <Link
+            href="https://vercel.com/integrations"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.connector}
+          >
+            Vercel
+          </Link>
+          <Link
+            href="https://supabase.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.connector}
+          >
+            Supabase
+          </Link>
+          <Link
+            href="https://stripe.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.connector}
+          >
+            Stripe
+          </Link>
+          <Link
+            href="https://console.cloud.google.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.connector}
+          >
+            Google Cloud
+          </Link>
         </div>
 
         <div className={styles.ctaWrap}>
