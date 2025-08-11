@@ -1,7 +1,7 @@
 // components/RemixMenu.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 export type RemixMenuProps = {
   /** Called when the user confirms “Create remix”. */
@@ -33,6 +33,7 @@ export function RemixMenu({
   label = "Remix",
 }: RemixMenuProps) {
   const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   function toggle() {
     setOpen(v => !v);
@@ -48,6 +49,30 @@ export function RemixMenu({
     } catch {}
     close();
   }
+
+  useEffect(() => {
+    if (!open) return;
+
+    function handleMouseDown(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        close();
+      }
+    }
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        close();
+      }
+    }
+
+    document.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handleMouseDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
 
   return (
     <div className={className} style={{ position: "relative", display: "inline-block" }}>
@@ -65,6 +90,7 @@ export function RemixMenu({
       {open && (
         <div
           role="menu"
+          ref={menuRef}
           style={{
             position: "absolute",
             top: "110%",
