@@ -3,15 +3,7 @@
 
 import { useEffect, useState } from "react";
 import styles from "./agents.module.css";
-import { api } from "@/libs/api";
-
-type Agent = {
-  id: string;
-  handle: string;
-  display_name?: string;
-  avatar?: string;
-  resonance?: number;
-};
+import { api, type Agent } from "@/lib/api";
 
 export default function AgentsRail() {
   const [agents, setAgents] = useState<Agent[]>([]);
