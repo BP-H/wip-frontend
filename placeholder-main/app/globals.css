@@ -1,0 +1,14 @@
+/* app/globals.css */
+:root{ --acc:#59ff9a; }  /* micro accent, remove if you hate green */
+
+*{ box-sizing:border-box; }
+html,body{ margin:0; padding:0; }
+a{ text-decoration:underline; text-decoration-thickness:1.5px; color:#fff; }
+a:focus-visible{ outline:2px solid var(--acc); outline-offset:2px; }
+
+.sn-btn{
+  border:1px solid rgba(0,0,0,.12);
+  background:#fff; font-weight:800;
+  height:36px; padding:0 12px; border-radius:999px;
+}
+.sn-btn:hover{ border-color: rgba(0,0,0,.24); }
