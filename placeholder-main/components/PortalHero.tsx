@@ -1,4 +1,3 @@
-// components/PortalHero.tsx
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -7,77 +6,73 @@ import { Float, Html, ContactShadows, OrbitControls } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
 
-// ----------------------------
-// Tiny shape library (inline)
-// ----------------------------
 type ShapeProps = {
   paused?: boolean;
   seed?: number;
   glass?: boolean;
 };
 
-function Rock({ paused, seed = 1 }: ShapeProps) {
+/* ---------- Inline fallback shapes so the build never breaks ---------- */
+function Rock({ paused, seed = 0 }: ShapeProps) {
   const mesh = useRef<THREE.Mesh>(null!);
-  const rot = useMemo(() => (seed * 9301 + 49297) % 233280 / 233280, [seed]);
-  useFrame((_, dt) => {
+  const color = useMemo(() => new THREE.Color().setHSL((seed * 0.137) % 1, 0.25, 0.6), [seed]);
+  useFrame((_, d) => {
     if (paused) return;
-    mesh.current.rotation.x += dt * 0.25;
-    mesh.current.rotation.y += dt * 0.18;
+    mesh.current.rotation.x += 0.25 * d;
+    mesh.current.rotation.y -= 0.18 * d;
   });
   return (
-    <mesh ref={mesh} castShadow receiveShadow rotation={[0.2 + rot, 0.6, 0]}>
-      <icosahedronGeometry args={[0.48, 0]} />
-      <meshStandardMaterial color="#cfd2d9" roughness={0.8} metalness={0.15} />
+    <mesh ref={mesh} castShadow receiveShadow>
+      <icosahedronGeometry args={[0.35, 0]} />
+      <meshStandardMaterial color={color} roughness={0.8} metalness={0.1} />
     </mesh>
   );
 }
 
-function Cube({ paused, seed = 1 }: ShapeProps) {
+function Cube({ paused, seed = 0 }: ShapeProps) {
   const mesh = useRef<THREE.Mesh>(null!);
-  const s = useMemo(() => 0.42 + ((seed * 1664525 + 1013904223) % 97) / 1000, [seed]);
-  useFrame((_, dt) => {
+  const color = useMemo(() => new THREE.Color().setHSL((0.6 + seed * 0.21) % 1, 0.2, 0.7), [seed]);
+  useFrame((_, d) => {
     if (paused) return;
-    mesh.current.rotation.x -= dt * 0.2;
-    mesh.current.rotation.z += dt * 0.14;
+    mesh.current.rotation.x += 0.2 * d;
+    mesh.current.rotation.z += 0.15 * d;
   });
   return (
     <mesh ref={mesh} castShadow receiveShadow>
-      <boxGeometry args={[s, s, s]} />
-      <meshStandardMaterial color="#e5e7eb" roughness={0.75} metalness={0.2} />
+      <boxGeometry args={[0.48, 0.48, 0.48]} />
+      <meshStandardMaterial color={color} roughness={0.7} metalness={0.15} />
     </mesh>
   );
 }
 
-function Torus({ paused, glass = false, seed = 1 }: ShapeProps) {
+function Torus({ paused, seed = 0, glass = false }: ShapeProps) {
   const mesh = useRef<THREE.Mesh>(null!);
-  useFrame((_, dt) => {
+  useFrame((_, d) => {
     if (paused) return;
-    mesh.current.rotation.x += dt * 0.1;
-    mesh.current.rotation.y -= dt * 0.15;
+    mesh.current.rotation.y -= 0.35 * d;
   });
   return (
     <mesh ref={mesh} castShadow receiveShadow>
-      <torusGeometry args={[0.36, 0.11, 14, 64]} />
+      <torusKnotGeometry args={[0.26, 0.08, 100, 16]} />
       {glass ? (
         <meshPhysicalMaterial
-          color="#ffffff"
-          transparent
-          opacity={0.9}
-          transmission={1}
+          metalness={0.1}
           roughness={0.05}
-          thickness={0.5}
-          metalness={0}
+          transmission={0.9}
+          thickness={0.6}
+          envMapIntensity={1}
+          clearcoat={1}
+          clearcoatRoughness={0.15}
+          color="#b9b5ff"
         />
       ) : (
-        <meshStandardMaterial color="#f5f5f7" roughness={0.6} metalness={0.25} />
+        <meshStandardMaterial color="#b9b5ff" roughness={0.25} metalness={0.25} />
       )}
     </mesh>
   );
 }
+/* --------------------------------------------------------------------- */
 
-// ----------------------------
-// Portal Hero
-// ----------------------------
 export default function PortalHero({ logoSrc = '/icon.png' }: { logoSrc?: string }) {
   const headerRef = useRef<HTMLElement | null>(null);
   const [headerH, setHeaderH] = useState(64);
@@ -85,38 +80,53 @@ export default function PortalHero({ logoSrc = '/icon.png' }: { logoSrc?: string
   const [open, setOpen] = useState(false);
   const [disableFX, setDisableFX] = useState(false);
   const [noGlass, setNoGlass] = useState(false);
+  const [kick, setKick] = useState(0);
 
-  // Measure header for sticky offset
+  // measure header height
   useEffect(() => {
     headerRef.current = document.querySelector('[data-app-header]');
-    const update = () => {
+    const measure = () => {
       if (!headerRef.current) return;
-      setHeaderH(headerRef.current.getBoundingClientRect().height || 64);
+      const h = headerRef.current.getBoundingClientRect().height || 64;
+      setHeaderH(h);
     };
-    update();
-    const ro = new ResizeObserver(update);
-    if (headerRef.current) ro.observe(headerRef.current);
-    window.addEventListener('resize', update);
+    measure();
+    const ro = new ResizeObserver(measure);
+    headerRef.current && ro.observe(headerRef.current);
+    window.addEventListener('resize', measure);
     return () => {
       ro.disconnect();
-      window.removeEventListener('resize', update);
+      window.removeEventListener('resize', measure);
     };
   }, []);
 
-  // Scroll shrink: from 1 down to 0.85
+  // scroll → scale + kick
   useEffect(() => {
-    let last = window.scrollY;
+    let lastY = window.scrollY;
+    let raf = 0;
     const onScroll = () => {
       const y = window.scrollY;
-      const target = 1 - Math.min(y / 900, 0.15);
+      const delta = Math.abs(y - lastY);
+      lastY = y;
+      const target = 1 - Math.min(y / 900, 0.15); // 1 → 0.85
       setScale((prev) => prev + (target - prev) * 0.12);
-      last = y;
+      setKick((k) => Math.min(1, k + delta / 800));
+      if (!raf) {
+        const tick = () => {
+          setKick((k) => (k > 0.001 ? k * 0.9 : 0));
+          raf = requestAnimationFrame(tick);
+        };
+        raf = requestAnimationFrame(tick);
+      }
     };
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      cancelAnimationFrame(raf);
+    };
   }, []);
 
-  // Lock body when modal open
+  // lock scroll in modal + Esc to close
   useEffect(() => {
     if (!open) return;
     document.body.style.overflow = 'hidden';
@@ -128,93 +138,115 @@ export default function PortalHero({ logoSrc = '/icon.png' }: { logoSrc?: string
     };
   }, [open]);
 
-  // Styles: compact, minimal, no gradients
+  // webgl capability → fx toggles
+  const onCreated = (state: any) => {
+    const webgl2 = !!state.gl.capabilities?.isWebGL2;
+    const isHiDPI = window.devicePixelRatio > 2;
+    setDisableFX(!webgl2);
+    setNoGlass(!webgl2 || isHiDPI);
+  };
+
+  // 💡 THE FIX: shrink the wrapper’s actual height with the scale.
+  // No more huge sticky dead zone.
+  const BASE_H = 220;
+  const MIN_H = 92; // collapsed height that feels like a compact portal
+  const dynamicH = Math.max(MIN_H, Math.round(BASE_H * scale));
+
+  // styles
   const portalStyle: React.CSSProperties = {
     position: 'sticky',
     top: `calc(${headerH}px + env(safe-area-inset-top, 0px))`,
     zIndex: 100,
     isolation: 'isolate',
-    background: 'var(--panel, transparent)',
-    borderBottom: '1px solid var(--stroke, rgba(255,255,255,0.06))',
-    paddingTop: 8,
-    paddingBottom: 8
+    background: 'var(--panel, #0b0c11)',
+    borderBottom: '1px solid var(--stroke, #1f2230)',
   };
-  const innerStyle: React.CSSProperties = {
-    transform: `scale(${scale}) translateZ(0)`,
-    transformOrigin: 'top center',
-    transition: 'transform 0.18s ease',
-    willChange: 'transform'
+  const shellStyle: React.CSSProperties = {
+    height: dynamicH,
+    transition: 'height 120ms ease',
+    pointerEvents: 'auto',
   };
   const cardStyle: React.CSSProperties = {
     position: 'relative',
-    height: 200,
+    height: '100%',
     borderRadius: 12,
     overflow: 'hidden',
-    border: '1px solid var(--stroke, rgba(255,255,255,0.08))',
-    background: 'var(--surface-2, #0b0c0f)',
-    boxShadow: '0 6px 24px rgba(0,0,0,0.35)',
-    touchAction: 'manipulation'
+    border: '1px solid var(--stroke, #262a3c)',
+    background: '#0f0f12',
+    boxShadow: `0 0 20px rgba(155,140,255,0.15)`,
+    touchAction: 'manipulation',
+    transform: `scale(${scale})`,
+    transformOrigin: 'top center',
+    transition: 'transform 120ms ease',
+    willChange: 'transform',
+  };
+  const glowPink: React.CSSProperties = {
+    position: 'absolute', inset: -20, pointerEvents: 'none',
+    background: 'radial-gradient(60% 50% at 50% 35%, rgba(255,45,184,0.25) 0%, transparent 70%)',
+    opacity: 0.5 + kick * 0.4,
+    filter: `blur(${6 + 12 * kick}px)`,
+    mixBlendMode: 'screen',
+  };
+  const glowPurple: React.CSSProperties = {
+    position: 'absolute', inset: -20, pointerEvents: 'none',
+    background: 'radial-gradient(55% 45% at 50% 30%, rgba(155,140,255,0.20) 0%, transparent 70%)',
+    opacity: 0.4 + kick * 0.3,
+    filter: `blur(${8 + 10 * kick}px)`,
+    mixBlendMode: 'screen',
+  };
+  const glossAngle: React.CSSProperties = {
+    position: 'absolute', inset: 0, pointerEvents: 'none',
+    background: 'linear-gradient(130deg, rgba(155,140,255,0.12) 10%, rgba(255,255,255,0) 40%, rgba(255,45,184,0.15) 90%)',
+    mixBlendMode: 'screen',
   };
 
   return (
     <div style={portalStyle}>
-      <div style={innerStyle}>
+      <div style={shellStyle}>
         <div style={cardStyle}>
+          <div aria-hidden style={glowPink} />
+          <div aria-hidden style={glowPurple} />
+          <div aria-hidden style={glossAngle} />
           <Canvas
-            style={{ width: '100%', height: '100%', display: 'block' }}
             camera={{ position: [0, 0, 3.2], fov: 50 }}
             dpr={[1, 1.5]}
             gl={{ antialias: false, powerPreference: 'high-performance' }}
-            onCreated={(state) => {
-              const webgl2 = !!state.gl.capabilities?.isWebGL2;
-              const isHiDPI = window.devicePixelRatio > 2;
-              setDisableFX(!webgl2);
-              setNoGlass(!webgl2 || isHiDPI);
-            }}
+            onCreated={onCreated}
           >
-            <color attach="background" args={['#0b0c0f']} />
-            <ambientLight intensity={0.9} />
-            <directionalLight position={[2, 3, 2]} intensity={0.9} />
-
+            <color attach="background" args={['#0a0b10']} />
+            <ambientLight intensity={0.8} />
+            <directionalLight position={[2, 3, 2]} intensity={0.8} />
             {/* Floating shapes */}
             <Float speed={1} rotationIntensity={0.3} floatIntensity={0.8}>
-              <group position={[-1.1, 0.1, 0]}>
-                <Rock paused={!open} seed={1} />
-              </group>
+              <group position={[-1.2, 0.2, 0]}><Rock paused={!open} /></group>
             </Float>
-            <Float speed={1.15} rotationIntensity={0.25} floatIntensity={0.7}>
-              <group position={[0.85, -0.15, 0.2]}>
-                <Cube paused={!open} seed={2} />
-              </group>
+            <Float speed={1.2} rotationIntensity={0.25} floatIntensity={0.7}>
+              <group position={[0.8, -0.2, 0.2]}><Cube paused={!open} /></group>
             </Float>
-            <Float speed={0.95} rotationIntensity={0.4} floatIntensity={0.9}>
-              <group position={[0.15, 0.3, -0.25]}>
-                <Torus paused={!open} glass={!noGlass} seed={3} />
-              </group>
+            <Float speed={0.9} rotationIntensity={0.4} floatIntensity={0.9}>
+              <group position={[0.2, 0.35, -0.3]}><Torus paused={!open} glass={!noGlass} /></group>
             </Float>
-
             <ContactShadows position={[0, -0.85, 0]} opacity={0.25} scale={10} blur={1.6} far={2} />
-
             {!disableFX && (
               <EffectComposer>
-                <Bloom intensity={0.55} luminanceThreshold={0.75} luminanceSmoothing={0.2} />
+                <Bloom intensity={0.6} luminanceThreshold={0.75} luminanceSmoothing={0.2} />
               </EffectComposer>
             )}
-
-            {/* Centered CTA */}
             <Html center>
               <button
-                onClick={() => setOpen(true)}
                 aria-label="Open 3D portal"
+                onClick={() => setOpen(true)}
                 style={{
+                  font: '600 14px/1 system-ui, -apple-system, Segoe UI, Roboto',
                   padding: '10px 14px',
                   borderRadius: 12,
-                  border: '1px solid rgba(255,255,255,0.18)',
-                  background: 'rgba(10,10,12,0.6)',
-                  color: '#fff',
-                  fontWeight: 600,
-                  fontSize: 14,
-                  backdropFilter: 'blur(6px)'
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  background: 'rgba(20,21,28,0.8)',
+                  backdropFilter: 'blur(4px)',
+                  color: 'white',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.35)',
+                  cursor: 'pointer',
+                  userSelect: 'none',
                 }}
               >
                 Enter universe — tap to interact
@@ -230,54 +262,46 @@ export default function PortalHero({ logoSrc = '/icon.png' }: { logoSrc?: string
           role="dialog"
           aria-modal="true"
           onClick={() => setOpen(false)}
-          style={{ position: 'fixed', inset: 0, zIndex: 999, background: 'rgba(7,8,11,0.92)' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 999, background: 'rgba(10,11,16,0.9)' }}
         >
           <Canvas camera={{ position: [0, 0, 5], fov: 55 }} dpr={[1, 1.5]} gl={{ antialias: false }}>
-            <color attach="background" args={['#0b0c0f']} />
+            <color attach="background" args={['#0a0b10']} />
             <ambientLight intensity={0.85} />
             <directionalLight position={[3, 2, 2]} intensity={0.9} />
-
-            {Array.from({ length: 18 }).map((_, i) => {
-              // fixed, seeded positions (no THREE.Vector3 allocation per frame)
-              const rx = (Math.sin(i * 12.9898) * 43758.5453) % 1;
-              const ry = (Math.sin(i * 78.233) * 96234.5453) % 1;
-              const rz = (Math.sin(i * 3.33) * 125.55) % 1;
-              const pos: [number, number, number] = [(rx - 0.5) * 6, (ry - 0.5) * 4, (rz - 0.5) * 5];
-              const kind = (i % 3) as 0 | 1 | 2;
+            {useMemo(() => Array.from({ length: 18 }).map((_, i) => {
+              const kind = (['rock', 'cube', 'torus'] as const)[i % 3];
+              const pos = new THREE.Vector3((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 4, (Math.random() - 0.5) * 5);
               return (
                 <group key={i} position={pos}>
-                  {kind === 0 && <Rock seed={i + 1} />}
-                  {kind === 1 && <Cube seed={i + 1} />}
-                  {kind === 2 && <Torus seed={i + 1} glass={!noGlass} />}
+                  {kind === 'rock' && <Rock seed={i} />}
+                  {kind === 'cube' && <Cube seed={i} />}
+                  {kind === 'torus' && <Torus seed={i} glass={!noGlass} />}
                 </group>
               );
-            })}
-
+            }), [noGlass])}
             <OrbitControls enablePan={false} />
-            <ContactShadows position={[0, -1.2, 0]} opacity={0.22} scale={15} blur={2.2} far={3} />
+            <ContactShadows position={[0, -1.2, 0]} opacity={0.2} scale={15} blur={2.2} far={3} />
             {!disableFX && (
               <EffectComposer>
-                <Bloom intensity={0.65} luminanceThreshold={0.8} luminanceSmoothing={0.25} />
+                <Bloom intensity={0.7} luminanceThreshold={0.8} luminanceSmoothing={0.25} />
               </EffectComposer>
             )}
-
             <Html center>
               <div
                 style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 10,
                   padding: '8px 12px',
                   borderRadius: 12,
-                  border: '1px solid rgba(255,255,255,0.16)',
-                  background: 'rgba(10,10,12,0.5)',
-                  color: '#fff',
-                  fontWeight: 600,
-                  fontSize: 13,
-                  display: 'inline-flex',
-                  gap: 8,
-                  alignItems: 'center',
-                  backdropFilter: 'blur(6px)'
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  background: 'rgba(20,21,28,0.65)',
+                  color: 'white',
+                  font: '600 13px/1 system-ui, -apple-system, Segoe UI, Roboto',
+                  userSelect: 'none',
                 }}
               >
-                <img src={logoSrc} alt="app logo" width={18} height={18} />
+                <img src={logoSrc} alt="app logo" width={18} height={18} style={{ borderRadius: 4 }} />
                 Tap anywhere to close
               </div>
             </Html>
