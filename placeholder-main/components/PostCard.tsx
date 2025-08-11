@@ -7,6 +7,12 @@ import ReactionBar from './ReactionBar';
 import styles from './postcard.module.css';
 import type { Post } from '@/lib/feed';
 
+// Extend the feed type minimally to tolerate partial data + optional fields we use here
+type CardPost = Partial<Post> & {
+  alt?: string;
+  reactions?: Record<string, number>;
+};
+
 // Client-only tiny 3D tile for `type === "three"`
 const Mini3D = dynamic(() => import('./Mini3D'), {
   ssr: false,
@@ -17,13 +23,14 @@ export default function PostCard({
   post,
   onReact,
 }: {
-  post: Partial<Post>;
-  onReact?: (prev: string | null, next: string) => void;
+  post: CardPost;
+  onReact?: (prev: string | null, next: string | null) => void;
 }) {
   const handleReact = onReact ?? (() => {});
 
   // Safe, descriptive alt text
-  const imgAlt =
+  const imgAlt: string =
+    (typeof post.alt === 'string' && post.alt.trim()) ||
     (typeof post.text === 'string' && post.text.trim().slice(0, 80)) ||
     (post.author?.name ? `${post.author.name}'s post image` : 'post image');
 
@@ -66,7 +73,7 @@ export default function PostCard({
 
       <footer className={styles.footer}>
         <ReactionBar
-          postId={post.id ? String(post.id) : undefined}
+          postId={post.id != null ? String(post.id) : undefined}
           counts={post.reactions ?? {}}
           onChange={handleReact}
         />
