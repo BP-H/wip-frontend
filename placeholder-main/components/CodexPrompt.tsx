@@ -51,7 +51,7 @@ export default function CodexPrompt() {
       <header className="row">
         <strong>Stable bug‑fix agent prompt</strong>
         <div className="grow" />
-        <button className="chip" onClick={toggle}>{collapsed ? 'Show' : 'Hide'}</button>
+        <button type="button" className="chip" onClick={toggle} aria-pressed={!collapsed}>{collapsed ? 'Show' : 'Hide'}</button>
       </header>
 
       {!collapsed && (
