@@ -2,109 +2,90 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
-type Counts = Record<string, number>;
-const OPTIONS = [
-  { key: "like",   emoji: "👍", label: "Like" },
-  { key: "hug",    emoji: "🤗", label: "Hug" },
-  { key: "fire",   emoji: "🔥", label: "Fire" },
-  { key: "rocket", emoji: "🚀", label: "Rocket" },
-  { key: "idea",   emoji: "💡", label: "Idea" },
-  { key: "love",   emoji: "❤️", label: "Love" },
+type Reaction = { key: string; emoji: string; label: string };
+const REACTIONS: Reaction[] = [
+  { key: "like",  emoji: "👍", label: "Like" },
+  { key: "love",  emoji: "❤️", label: "Love" },
+  { key: "hug",   emoji: "🤗", label: "Hug" },
+  { key: "cry",   emoji: "😭", label: "Cry" },
+  { key: "fire",  emoji: "🔥", label: "Fire" },
+  { key: "light", emoji: "💡", label: "Insightful" },
 ];
-const STORE_KEY = "sn2177:rx:v1";
 
 export default function ReactionBar({
-  postId, counts, onChange,
+  onReact,
+  defaultLabel = "Like",
 }: {
-  postId: string;
-  counts: Counts;
-  onChange: (prev: string | null, next: string) => void;
+  onReact?: (r: Reaction) => void;
+  defaultLabel?: string;
 }) {
-  const [mine, setMine] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
-  const anchor = useRef<HTMLDivElement>(null);
+  const [pressed, setPressed] = useState<Reaction | null>(null);
+  const hold = useRef<number | null>(null);
 
-  useEffect(() => {
-    try {
-      const map = JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
-      setMine(map[postId] ?? null);
-    } catch {}
-  }, [postId]);
+  // mobile long‑press
+  const startHold = () => {
+    if (hold.current) return;
+    hold.current = window.setTimeout(() => setOpen(true), 380);
+  };
+  const endHold = () => {
+    if (hold.current) window.clearTimeout(hold.current);
+    hold.current = null;
+  };
 
-  useEffect(() => {
-    const onDoc = (e: MouseEvent) => {
-      if (!anchor.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("pointerdown", onDoc);
-    return () => document.removeEventListener("pointerdown", onDoc);
-  }, []);
+  useEffect(() => () => endHold(), []);
 
-  function pick(key: string) {
-    onChange(mine, key);
-    setMine(key);
-    try {
-      const map = JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
-      map[postId] = key;
-      localStorage.setItem(STORE_KEY, JSON.stringify(map));
-    } catch {}
+  const handleChoose = (r: Reaction) => {
+    setPressed(r);
     setOpen(false);
-  }
-
-  const summary = Object.entries(counts)
-    .filter(([, v]) => v > 0)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([k]) => OPTIONS.find(o => o.key === k)?.emoji)
-    .join(" ");
+    onReact?.(r);
+  };
 
   return (
-    <div ref={anchor} style={{ position: "relative", display: "inline-block" }}>
-      <button
-        className="sn-btn"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onMouseEnter={() => setOpen(true)}
-        onFocus={() => setOpen(true)}
-        onClick={() => setOpen(v => !v)}
-      >
-        {mine ? "Reacted" : "Like"} {summary && <span> · {summary}</span>}
-      </button>
-
-      {open && (
-        <div
-          role="menu"
-          style={{
-            position: "absolute",
-            bottom: "120%",
-            left: 0,
-            background: "rgba(255,255,255,0.95)",
-            border: "1px solid rgba(0,0,0,0.08)",
-            boxShadow: "0 12px 28px rgba(16,24,40,0.22)",
-            padding: "8px 10px",
-            borderRadius: 28,
-            display: "flex",
-            gap: 10,
-            backdropFilter: "blur(6px)",
-            zIndex: 50,
-          }}
+    <div style={{ position: "relative", display: "inline-block" }}>
+      <div className="reaction-bar">
+        <button
+          className="reaction-btn"
+          onMouseEnter={() => setOpen(true)}
+          onMouseLeave={() => setOpen(false)}
+          onTouchStart={startHold}
+          onTouchEnd={endHold}
+          onClick={() => handleChoose(REACTIONS[0])}
+          aria-label="React"
         >
-          {OPTIONS.map(o => (
-            <button
-              key={o.key}
-              title={o.label}
-              onClick={() => pick(o.key)}
-              style={{
-                width: 40, height: 40, borderRadius: 999,
-                fontSize: 20, border: "1px solid rgba(0,0,0,0.06)",
-                background: "#fff", cursor: "pointer",
-              }}
-            >
-              {o.emoji}
-            </button>
-          ))}
-        </div>
-      )}
+          {pressed ? `${pressed.emoji} ${pressed.label}` : defaultLabel}
+        </button>
+        <button className="reaction-btn btn--ghost">Comment</button>
+        <button className="reaction-btn btn--ghost">Share</button>
+      </div>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            className="reaction-flyout"
+            initial={{ opacity: 0, y: 8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+            onMouseEnter={() => setOpen(true)}
+            onMouseLeave={() => setOpen(false)}
+          >
+            {REACTIONS.map((r) => (
+              <motion.button
+                key={r.key}
+                className="reaction"
+                onClick={() => handleChoose(r)}
+                title={r.label}
+                whileHover={{ y: -3, scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <span style={{ fontSize: 22, lineHeight: 1 }}>{r.emoji}</span>
+              </motion.button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
