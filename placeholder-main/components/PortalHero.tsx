@@ -82,6 +82,26 @@ export default function PortalHero({ logoSrc = '/icon.png' }: { logoSrc?: string
   const [noGlass, setNoGlass] = useState(false);
   const [kick, setKick] = useState(0);
 
+  const shapes = useMemo(
+    () =>
+      Array.from({ length: 18 }).map((_, i) => {
+        const kind = (['rock', 'cube', 'torus'] as const)[i % 3];
+        const pos = new THREE.Vector3(
+          (Math.random() - 0.5) * 6,
+          (Math.random() - 0.5) * 4,
+          (Math.random() - 0.5) * 5
+        );
+        return (
+          <group key={i} position={pos}>
+            {kind === 'rock' && <Rock seed={i} />}
+            {kind === 'cube' && <Cube seed={i} />}
+            {kind === 'torus' && <Torus seed={i} glass={!noGlass} />}
+          </group>
+        );
+      }),
+    [noGlass]
+  );
+
   // measure header height
   useEffect(() => {
     headerRef.current = document.querySelector('[data-app-header]');
@@ -121,8 +141,8 @@ export default function PortalHero({ logoSrc = '/icon.png' }: { logoSrc?: string
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => {
-      window.removeEventListener('scroll', onScroll);
       cancelAnimationFrame(raf);
+      window.removeEventListener('scroll', onScroll);
     };
   }, []);
 
@@ -268,17 +288,7 @@ export default function PortalHero({ logoSrc = '/icon.png' }: { logoSrc?: string
             <color attach="background" args={['#0a0b10']} />
             <ambientLight intensity={0.85} />
             <directionalLight position={[3, 2, 2]} intensity={0.9} />
-            {useMemo(() => Array.from({ length: 18 }).map((_, i) => {
-              const kind = (['rock', 'cube', 'torus'] as const)[i % 3];
-              const pos = new THREE.Vector3((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 4, (Math.random() - 0.5) * 5);
-              return (
-                <group key={i} position={pos}>
-                  {kind === 'rock' && <Rock seed={i} />}
-                  {kind === 'cube' && <Cube seed={i} />}
-                  {kind === 'torus' && <Torus seed={i} glass={!noGlass} />}
-                </group>
-              );
-            }), [noGlass])}
+            {shapes}
             <OrbitControls enablePan={false} />
             <ContactShadows position={[0, -1.2, 0]} opacity={0.2} scale={15} blur={2.2} far={3} />
             {!disableFX && (
