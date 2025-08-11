@@ -5,12 +5,20 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
+import PostComposer from '@/components/PostComposer';
 import styles from './page.module.css';
 
 // 3D hero (no SSR)
 const PortalHero = dynamic(() => import('@/components/PortalHero'), { ssr: false });
 
-type Post = { id: string; author: string; text: string; time: string; image?: string };
+type Post = {
+  id: string;
+  author: string;
+  text: string;
+  time: string;
+  image?: string;
+  alt?: string;
+};
 
 // demo feed
 function makeBatch(offset: number, size = 10): Post[] {
@@ -22,7 +30,7 @@ function makeBatch(offset: number, size = 10): Post[] {
       time: new Date(Date.now() - n * 1000 * 60 * 5).toLocaleString(),
       text:
         n % 3 === 0
-          ? 'Low‑poly moment — rotating differently in each instance as you scroll.'
+          ? 'Low-poly moment — rotating differently in each instance as you scroll.'
           : 'Prototype feed — symbolic demo copy for layout testing.',
       image: n % 2 === 0 ? `https://picsum.photos/seed/sn_${n}/960/540` : undefined,
     };
@@ -69,7 +77,7 @@ export default function Page() {
   // measure header height → CSS var so sticky math is exact
   useEffect(() => {
     if (typeof ResizeObserver === 'undefined') return;
-    const header = document.querySelector<HTMLElement>('header.topbar');
+    const header = document.querySelector<HTMLElement>('header[role="banner"]');
     if (!header) return;
     const set = () =>
       document.documentElement.style.setProperty('--topbar-h', `${header.offsetHeight}px`);
@@ -253,6 +261,8 @@ export default function Page() {
             </div>
           </div>
 
+          <PostComposer />
+
           {/* feed */}
           {items.map((p) => (
             <article key={p.id} className={`${styles.card} ${styles.post}`}>
@@ -263,7 +273,12 @@ export default function Page() {
               <p className={styles.postText}>{p.text}</p>
               {p.image && (
                 <div className={styles.mediaWrap}>
-                  <img src={p.image} alt="" loading="lazy" decoding="async" />
+                  <img
+                    src={p.image}
+                    alt={(p.alt || p.text || 'Post image').slice(0, 80)}
+                    loading="lazy"
+                    decoding="async"
+                  />
                 </div>
               )}
               <footer className={styles.postActions}>
@@ -320,14 +335,4 @@ export default function Page() {
         }
         html,
         body {
-          background: linear-gradient(180deg, var(--bg0) 0%, var(--bg1) 100%);
-          color: var(--ink);
-        }
-        * {
-          box-sizing: border-box;
-        }
-      `}</style>
-
-    </main>
-  );
-}
+          background: linear-gradient(180deg, var(--bg0) 0%,

@@ -7,13 +7,12 @@ import ReactionBar from './ReactionBar';
 import styles from './postcard.module.css';
 import type { Post } from '@/lib/feed';
 
-// Extend the feed type minimally to tolerate partial data + optional fields we use here
+// Tolerate partial data + optional fields specific to this card
 type CardPost = Partial<Post> & {
   alt?: string;
   reactions?: Record<string, number>;
 };
 
-// Client-only tiny 3D tile for `type === "three"`
 const Mini3D = dynamic(() => import('./Mini3D'), {
   ssr: false,
   loading: () => <div className="min3d-skeleton" aria-label="Loading 3D…" />,
@@ -41,8 +40,14 @@ export default function PostCard({
     <article className={styles.card}>
       <header className={styles.header}>
         {post.author?.avatar ? (
-          // using <img> to avoid Next/Image config for now
-          <img className={styles.avatar} src={post.author.avatar} alt="" />
+          // Use <img> to avoid Next/Image domain config; avatar is decorative
+          <img
+            className={styles.avatar}
+            src={post.author.avatar}
+            alt=""
+            loading="lazy"
+            decoding="async"
+          />
         ) : (
           <div className={styles.avatar} aria-hidden />
         )}
@@ -50,7 +55,7 @@ export default function PostCard({
           <div className={styles.name}>{post.author?.name ?? 'anon'}</div>
           <div className={styles.meta}>
             @{post.author?.handle ?? 'unknown'} ·{' '}
-            {post.createdAt ? new Date(post.createdAt).toLocaleString() : 'just now'}
+            {post.createdAt ? new Date(post.createdAt as any).toLocaleString() : 'just now'}
           </div>
         </div>
       </header>

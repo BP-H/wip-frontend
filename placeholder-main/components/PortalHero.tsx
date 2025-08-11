@@ -254,6 +254,7 @@ export default function PortalHero({ logoSrc = '/icon.png' }: { logoSrc?: string
             )}
             <Html center>
               <button
+                type="button"
                 aria-label="Open 3D portal"
                 onClick={() => setOpen(true)}
                 style={{
