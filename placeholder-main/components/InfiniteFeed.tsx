@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type Post = { id: string; author: string; time: string; text: string; image?: string };
 
 function makePosts(from: number, count: number): Post[] {
-  return Array.from({ length: count }).map((_, i) => {
+  return Array.from({ length: count }, (_, i) => {
     const idx = from + i;
     return {
       id: String(idx),
@@ -32,18 +32,18 @@ export default function InfiniteFeed({
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!sentinelRef.current) return;
-    let timer: ReturnType<typeof setTimeout> | undefined;
     const io = new IntersectionObserver(
       (entries) => {
-        if (!hasMore || loading) return;
+        if (!hasMore || loading || timer.current) return;
         const first = entries[0];
         if (first.isIntersecting) {
           setLoading(true);
           // fake fetch
-          timer = setTimeout(() => {
+          timer.current = setTimeout(() => {
             const nextPage = page + 1;
             const start = (nextPage - 1) * pageSize;
             const next = makePosts(start, pageSize);
@@ -51,6 +51,7 @@ export default function InfiniteFeed({
             setPage(nextPage);
             setHasMore(nextPage < maxPages);
             setLoading(false);
+            timer.current = null;
           }, 350);
         }
       },
@@ -59,7 +60,10 @@ export default function InfiniteFeed({
 
     io.observe(sentinelRef.current);
     return () => {
-      if (timer) clearTimeout(timer);
+      if (timer.current) {
+        clearTimeout(timer.current);
+        timer.current = null;
+      }
       io.disconnect();
     };
   }, [page, pageSize, maxPages, loading, hasMore]);

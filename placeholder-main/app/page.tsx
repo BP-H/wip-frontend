@@ -40,28 +40,34 @@ export default function Page() {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
     if (!sentinelRef.current) return;
     const io = new IntersectionObserver(
       (entries) => {
         const [e] = entries;
         if (!e.isIntersecting || loading || !hasMore) return;
         setLoading(true);
-        setTimeout(() => {
+        timer = setTimeout(() => {
           const next = makeBatch(page * 12, 12);
           setItems((prev) => [...prev, ...next]);
-          setPage((p) => p + 1);
-          if (page >= 10) setHasMore(false); // demo cap
+          const nextPage = page + 1;
+          setPage(nextPage);
+          if (nextPage >= 10) setHasMore(false); // demo cap
           setLoading(false);
         }, 220);
       },
       { rootMargin: '1200px 0px 800px 0px' }
     );
     io.observe(sentinelRef.current);
-    return () => io.disconnect();
+    return () => {
+      if (timer) clearTimeout(timer);
+      io.disconnect();
+    };
   }, [page, loading, hasMore]);
 
   // measure header height → CSS var so sticky math is exact
   useEffect(() => {
+    if (typeof ResizeObserver === 'undefined') return;
     const header = document.querySelector<HTMLElement>('header.topbar');
     if (!header) return;
     const set = () =>
