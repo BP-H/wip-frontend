@@ -107,6 +107,32 @@
     0 0 0 1px rgba(255,255,255,.10) inset;
 }
 
+/* Grid of external integrations */
+.connectGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+  padding: 0 4px 12px 4px;
+}
+
+.connector {
+  display: block;
+  padding: 8px 12px;
+  border-radius: 12px;
+  color: #e9eef5;
+  text-align: center;
+  text-decoration: none;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(16,18,27,.75);
+  backdrop-filter: blur(6px);
+  transition: background .15s ease, border-color .15s ease;
+}
+
+.connector:hover {
+  background: rgba(23,26,37,.88);
+  border-color: rgba(255,255,255,.18);
+}
+
 /* Optional small “pill” footer area */
 .footer {
   margin-top: auto;
