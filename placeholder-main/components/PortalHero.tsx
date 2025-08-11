@@ -7,17 +7,12 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { Float, Html, ContactShadows, OrbitControls } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 
-/* ------------------------------------------
-   Helpers
------------------------------------------- */
+/* ---------- utils ---------- */
 
 type ShapeProps = { seed?: number; glass?: boolean };
-
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
-/* ------------------------------------------
-   Shapes (inline so builds never miss them)
------------------------------------------- */
+/* ---------- inline shapes (fixes "Cannot find name 'Rock'") ---------- */
 
 function Rock({ seed = 0 }: ShapeProps) {
   const ref = useRef<THREE.Mesh>(null!);
@@ -65,7 +60,7 @@ function Torus({ seed = 0, glass = false }: ShapeProps) {
   });
   return (
     <mesh ref={ref}>
-      {/* 64/12 segments (lighter than 120/18) for perf */}
+      {/* lighter than 120/18 for perf */}
       <torusKnotGeometry args={[0.48, 0.16, 64, 12]} />
       {glass ? (
         <meshPhysicalMaterial
@@ -82,52 +77,55 @@ function Torus({ seed = 0, glass = false }: ShapeProps) {
   );
 }
 
-/* ------------------------------------------
-   PortalHero (not sticky—parent controls that)
------------------------------------------- */
+/* ---------- hero (NOT sticky; let the page wrapper be sticky) ---------- */
 
-export default function PortalHero({ logoSrc = '/icon.png', title = 'Enter universe — tap to interact' }: { logoSrc?: string; title?: string }) {
+export default function PortalHero({
+  logoSrc = '/icon.png',
+  title = 'Enter universe — tap to interact',
+}: {
+  logoSrc?: string;
+  title?: string;
+}) {
   const [scale, setScale] = useState(1);
   const [kick, setKick] = useState(0);
   const [open, setOpen] = useState(false);
 
-  // Post-processing / material fallbacks
+  // capability gates
   const [disableFX, setDisableFX] = useState(false);
   const [noGlass, setNoGlass] = useState(false);
 
-  // Scroll-driven scale + “energy” kick
+  // scroll-driven scale + “energy” kick
   useEffect(() => {
     let lastY = window.scrollY;
-    let running = true;
+    let run = true;
 
-    const calc = () => {
+    const step = () => {
       const y = window.scrollY;
       const delta = Math.abs(y - lastY);
       lastY = y;
 
       setScale((s) => {
         const target = clamp(1 - y / 900, 0.84, 1);
-        return s + (target - s) * 0.12; // ease toward target
+        return s + (target - s) * 0.12;
       });
-
       setKick((k) => clamp(k + delta / 900, 0, 1));
-      if (running) requestAnimationFrame(calc);
+
+      if (run) requestAnimationFrame(step);
     };
 
     const decay = () => {
       setKick((k) => k * 0.92);
-      if (running) requestAnimationFrame(decay);
+      if (run) requestAnimationFrame(decay);
     };
 
-    requestAnimationFrame(calc);
+    requestAnimationFrame(step);
     requestAnimationFrame(decay);
-
     return () => {
-      running = false;
+      run = false;
     };
   }, []);
 
-  // Lock body scroll + close on ESC when modal open
+  // lock body scroll + ESC to close when modal open
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -140,7 +138,13 @@ export default function PortalHero({ logoSrc = '/icon.png', title = 'Enter unive
     };
   }, [open]);
 
-  // Style layers (inline so no CSS file required)
+  // styles (inline so no CSS dependency)
+  const innerStyle: React.CSSProperties = {
+    transform: `scale(${scale}) translateZ(0)`,
+    transformOrigin: 'top center',
+    transition: 'transform .18s linear',
+    willChange: 'transform',
+  };
   const cardStyle: React.CSSProperties = {
     position: 'relative',
     height: 220,
@@ -150,12 +154,6 @@ export default function PortalHero({ logoSrc = '/icon.png', title = 'Enter unive
     background: '#0a0b10',
     boxShadow: '0 0 20px rgba(155,140,255,0.15)',
     touchAction: 'manipulation',
-  };
-  const innerStyle: React.CSSProperties = {
-    transform: `scale(${scale}) translateZ(0)`,
-    transformOrigin: 'top center',
-    transition: 'transform .18s linear',
-    willChange: 'transform',
   };
   const glowPink: React.CSSProperties = {
     position: 'absolute',
@@ -195,10 +193,9 @@ export default function PortalHero({ logoSrc = '/icon.png', title = 'Enter unive
 
         <Canvas
           camera={{ position: [0, 0, 3.2], fov: 50 }}
-          dpr={[1, 1.5]}                       // cap for perf
+          dpr={[1, 1.5]} // cap for perf
           gl={{ antialias: false, powerPreference: 'high-performance' }}
           onCreated={({ gl }) => {
-            // graceful degrade: if WebGL2 missing, disable bloom + glass
             const webgl2 = (gl as any).capabilities?.isWebGL2 ?? false;
             const hiDPI = window.devicePixelRatio > 2;
             setDisableFX(!webgl2);
@@ -209,7 +206,6 @@ export default function PortalHero({ logoSrc = '/icon.png', title = 'Enter unive
           <ambientLight intensity={0.8} />
           <directionalLight position={[2, 3, 2]} intensity={0.85} />
 
-          {/* trio of floaters */}
           <Float speed={1} rotationIntensity={0.35} floatIntensity={0.8}>
             <group position={[-1.2, 0.2, 0]}>
               <Rock seed={11} />
@@ -255,7 +251,6 @@ export default function PortalHero({ logoSrc = '/icon.png', title = 'Enter unive
         </Canvas>
       </div>
 
-      {/* Modal */}
       {open && (
         <div
           role="dialog"
