@@ -7,6 +7,14 @@ import * as THREE from 'three';
 
 type ShapeKind = 'rock' | 'cube' | 'torus';
 
+/** small helpers */
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+const scrollTop = () =>
+  typeof window === 'undefined'
+    ? 0
+    : window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+
+/** shapes */
 function Rock({ seed = 0 }) {
   const ref = useRef<THREE.Mesh>(null!);
   const speed = useMemo(() => 0.2 + ((seed % 100) / 150), [seed]);
@@ -54,7 +62,6 @@ function Torus({ seed = 0 }) {
   return (
     <mesh ref={ref}>
       <torusKnotGeometry args={[0.48, 0.16, 120, 18]} />
-      {/* soft translucent look on white */}
       <meshPhysicalMaterial color="#f9fbff" transmission={0.45} thickness={2} roughness={0.2} />
     </mesh>
   );
@@ -82,6 +89,10 @@ function Trio() {
   );
 }
 
+/**
+ * Sticky wrapper lives on the OUTER div (no transform/overflow on it).
+ * We scale a CHILD div — this keeps sticky working on iOS/Android.
+ */
 export default function PortalHero({
   title = 'Enter universe — tap to interact',
   logoSrc = '/icon.png',
@@ -89,52 +100,77 @@ export default function PortalHero({
   title?: string;
   logoSrc?: string;
 }) {
-  const [open, setOpen] = useState(false);
   const [scale, setScale] = useState(1);
+  const [open, setOpen] = useState(false);
 
-  // Compress the hero as you scroll
   useEffect(() => {
-    const onScroll = () => {
-      const y = window.scrollY || 0;
-      const s = Math.max(0.82, 1 - y / 900);
+    let ticking = false;
+    const handle = () => {
+      const y = scrollTop();
+      const s = clamp(1 - y / 900, 0.82, 1); // 1 → 0.82 over ~900px
       setScale(s);
+      ticking = false;
     };
-    onScroll();
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(handle);
+      }
+    };
+    handle();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   return (
-    <>
+    <div
+      className="portalSticky"
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 5,
+        borderBottom: '1px solid var(--stroke, #e5e7eb)',
+        background: 'var(--panel, #ffffff)',
+      }}
+    >
+      {/* scale the inner, keep sticky on the parent */}
       <div
+        className="portalScale"
         style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 10,
           transform: `scale(${scale})`,
           transformOrigin: 'top center',
           transition: 'transform .15s linear',
-          borderBottom: '1px solid var(--stroke, #e5e7eb)',
-          background: 'var(--panel, #ffffff)',
         }}
       >
         <div
+          className="portalCanvasWrap"
           style={{
             height: 220,
             borderRadius: 16,
             overflow: 'hidden',
             position: 'relative',
             border: '1px solid var(--stroke, #e5e7eb)',
+            touchAction: 'manipulation',
           }}
         >
+          {/* light ring / portal glow */}
+          <div
+            aria-hidden
+            style={{
+              position: 'absolute',
+              inset: -40,
+              background:
+                'radial-gradient(50% 60% at 50% 20%, rgba(255,45,184,.18), rgba(79,70,229,.12) 30%, transparent 70%)',
+              pointerEvents: 'none',
+              mixBlendMode: 'multiply',
+            }}
+          />
           <Canvas camera={{ position: [0, 0, 3.2], fov: 50 }} dpr={[1, 2]}>
-            {/* white canvas */}
             <color attach="background" args={['#ffffff']} />
             <ambientLight intensity={0.8} />
             <directionalLight position={[2, 3, 2]} intensity={0.9} />
             <Trio />
             <ContactShadows position={[0, -0.85, 0]} opacity={0.25} scale={10} blur={1.8} far={2} />
-            {/* hint overlay */}
             <Html center>
               <button
                 onClick={() => setOpen(true)}
@@ -142,7 +178,7 @@ export default function PortalHero({
                   padding: '10px 14px',
                   borderRadius: 12,
                   border: '1px solid var(--stroke, #e5e7eb)',
-                  background: 'rgba(255,255,255,0.8)',
+                  background: 'rgba(255,255,255,0.88)',
                   color: '#0f172a',
                   cursor: 'pointer',
                   fontWeight: 700,
@@ -156,7 +192,7 @@ export default function PortalHero({
         </div>
       </div>
 
-      {/* Fullscreen portal */}
+      {/* fullscreen portal */}
       {open && (
         <div
           role="dialog"
@@ -166,7 +202,6 @@ export default function PortalHero({
             inset: 0,
             zIndex: 999,
             background: '#ffffff',
-            borderTop: '1px solid var(--stroke, #e5e7eb)',
           }}
           onClick={() => setOpen(false)}
         >
@@ -190,7 +225,7 @@ export default function PortalHero({
               );
             })}
             <OrbitControls enablePan={false} />
-            <ContactShadows position={[0, -1.2, 0]} opacity={0.25} scale={15} blur={2.4} far={3} />
+            <ContactShadows position={[0, -1.2, 0]} opacity={0.25} scale={15} blur={2.2} far={3} />
             <Html center>
               <div
                 style={{
@@ -200,7 +235,7 @@ export default function PortalHero({
                   padding: '8px 12px',
                   borderRadius: 12,
                   border: '1px solid var(--stroke, #e5e7eb)',
-                  background: 'rgba(255,255,255,0.85)',
+                  background: 'rgba(255,255,255,0.9)',
                   color: '#0f172a',
                   fontWeight: 700,
                 }}
@@ -212,6 +247,6 @@ export default function PortalHero({
           </Canvas>
         </div>
       )}
-    </>
+    </div>
   );
 }
