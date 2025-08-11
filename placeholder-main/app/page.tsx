@@ -50,8 +50,9 @@ export default function Page() {
         timer = setTimeout(() => {
           const next = makeBatch(page * 12, 12);
           setItems((prev) => [...prev, ...next]);
-          setPage((p) => p + 1);
-          if (page >= 10) setHasMore(false); // demo cap
+          const nextPage = page + 1;
+          setPage(nextPage);
+          if (nextPage >= 10) setHasMore(false); // demo cap
           setLoading(false);
         }, 220);
       },
