@@ -27,7 +27,7 @@ export default function StoriesRail({ seed = 2177 }: StoriesRailProps) {
       'prism','nova','echo','glyph','delta','tau','quark','semaphore','anova','kappa',
       'atlas','sora','zeno','pulsar','cosmo','lyra'
     ];
-    return Array.from({ length: 22 }).map((_, i) => {
+    return Array.from({ length: 22 }, (_, i) => {
       const hue = Math.floor(r() * 360);
       const a = 0.45 + r() * 0.4;
       return { id: `s${i}`, hue, alpha: clamp(a, 0.3, 0.95), label: '@' + names[i % names.length] };
