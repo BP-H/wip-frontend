@@ -1,142 +1,150 @@
 // components/ReactionBar.tsx
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useEffect, useRef, useState } from "react";
 
-export type Reaction = { key: string; emoji: string; label: string };
+/** shape sent to your handler */
+export type ReactionEvent = { emoji: string; source: "quick" | "picker" };
 
-const REACTIONS: Reaction[] = [
-  { key: "like",  emoji: "👍", label: "Like" },
-  { key: "love",  emoji: "❤️", label: "Love" },
-  { key: "hug",   emoji: "🤗", label: "Hug" },
-  { key: "cry",   emoji: "😭", label: "Cry" },
-  { key: "fire",  emoji: "🔥", label: "Fire" },
-  { key: "light", emoji: "💡", label: "Insightful" },
-];
+type Props = {
+  emojis?: string[];
+  defaultEmoji?: string;
+  onReact?: (ev: ReactionEvent) => void;
+  /** for accessibility; multiple bars on a page are fine */
+  id?: string;
+};
 
+/**
+ * Defensive ReactionBar:
+ * - Desktop: hover opens the tray, click = default 👍 (or your defaultEmoji)
+ * - Mobile: long‑press opens the tray, quick tap = default
+ * - Esc to close; click outside closes
+ * - Works WITHOUT framer‑motion; if you later install it, you can animate via CSS or library
+ */
 export default function ReactionBar({
+  emojis = ["👍", "❤️", "🤗", "🔥", "🧠", "👏"],
+  defaultEmoji = "👍",
   onReact,
-  defaultLabel = "Like",
-}: {
-  onReact?: (r: Reaction) => void;
-  defaultLabel?: string;
-}) {
+  id,
+}: Props) {
   const [open, setOpen] = useState(false);
-  const [pressed, setPressed] = useState<Reaction | null>(null);
-  const hold = useRef<number | null>(null);
+  const [isTouch, setIsTouch] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const longRef = useRef<number | null>(null);
 
-  // mobile long‑press (open the flyout)
-  const startHold = () => {
-    if (hold.current) return;
-    hold.current = window.setTimeout(() => setOpen(true), 380);
-  };
-  const endHold = () => {
-    if (hold.current) window.clearTimeout(hold.current);
-    hold.current = null;
-  };
-  useEffect(() => () => endHold(), []);
+  // SSR-safe touch detection
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsTouch(("ontouchstart" in window) || navigator.maxTouchPoints > 0);
+    }
+  }, []);
 
-  const handleChoose = (r: Reaction) => {
-    setPressed(r);
+  // Close on escape / outside click
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    const onDown = (e: PointerEvent) => {
+      if (!rootRef.current) return;
+      if (!rootRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onDown);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onDown);
+    };
+  }, []);
+
+  const commit = (emoji: string, source: "quick" | "picker") => {
+    onReact?.({ emoji, source });
     setOpen(false);
-    onReact?.(r);
+  };
+
+  // Desktop behavior
+  const onMouseEnter = () => !isTouch && setOpen(true);
+  const onMouseLeave = () => !isTouch && setOpen(false);
+  const onMainClick = () => !isTouch && commit(defaultEmoji, "quick");
+
+  // Mobile long-press behavior
+  const onTouchStart = () => {
+    if (!isTouch) return;
+    longRef.current = window.setTimeout(() => setOpen(true), 350);
+  };
+  const onTouchEnd = () => {
+    if (!isTouch) return;
+    if (longRef.current) {
+      clearTimeout(longRef.current);
+      longRef.current = null;
+      // if the tray didn’t open yet, it was a quick tap
+      if (!open) commit(defaultEmoji, "quick");
+    }
   };
 
   return (
-    <div className="rb" role="group" aria-label="Reactions">
-      <div
-        className="reaction-bar"
-        onMouseLeave={() => setOpen(false)}
+    <div
+      ref={rootRef}
+      className="rb"
+      id={id}
+      aria-label="Reactions"
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      <button
+        type="button"
+        className="rb-main"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={onMainClick}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
       >
-        <button
-          className="reaction-btn"
-          onMouseEnter={() => setOpen(true)}
-          onTouchStart={startHold}
-          onTouchEnd={endHold}
-          onClick={() => handleChoose(REACTIONS[0])}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") handleChoose(REACTIONS[0]);
-          }}
-          aria-haspopup="true"
-          aria-expanded={open}
-        >
-          {pressed ? `${pressed.emoji} ${pressed.label}` : defaultLabel}
-        </button>
+        <span aria-hidden>🙂</span>
+        <span className="rb-label">React</span>
+      </button>
 
-        <button className="reaction-btn btn--ghost">Comment</button>
-        <button className="reaction-btn btn--ghost">Share</button>
+      <div role="menu" className={`rb-tray ${open ? "open" : ""}`}>
+        {emojis.map((e) => (
+          <button
+            key={e}
+            role="menuitem"
+            type="button"
+            className="rb-emoji"
+            aria-label={`React ${e}`}
+            onClick={() => commit(e, "picker")}
+          >
+            {e}
+          </button>
+        ))}
       </div>
 
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            className="reaction-flyout"
-            initial={{ opacity: 0, y: 8, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.98 }}
-            onMouseEnter={() => setOpen(true)}
-            onMouseLeave={() => setOpen(false)}
-          >
-            {REACTIONS.map((r) => (
-              <motion.button
-                key={r.key}
-                className="reaction"
-                onClick={() => handleChoose(r)}
-                title={r.label}
-                whileHover={{ y: -3, scale: 1.06 }}
-                whileTap={{ scale: 0.94 }}
-                aria-label={r.label}
-              >
-                <span style={{ fontSize: 22, lineHeight: 1 }}>{r.emoji}</span>
-              </motion.button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* scoped, dependency‑free styles (works on dark or matte‑white UIs) */}
       <style jsx>{`
         .rb { position: relative; display: inline-block; }
-        .reaction-bar { display: inline-flex; gap: 8px; }
-
-        .reaction-btn {
-          display: inline-flex; align-items: center; gap: 6px;
-          padding: 6px 12px; font-weight: 600; cursor: pointer;
-          border-radius: 10px; line-height: 1;
-          border: 1px solid var(--stroke, rgba(0,0,0,.12));
-          background: var(--surface, #fff);
-          color: var(--ink, #111);
-          box-shadow: inset 0 -1px 0 rgba(0,0,0,.04);
-          transition: box-shadow .15s ease, transform .06s ease, border-color .2s ease;
+        .rb-main {
+          display:inline-flex; gap:.5rem; align-items:center;
+          height:36px; padding:0 12px; border-radius:12px;
+          background:#121a2a; color:#e9edf7; border:1px solid var(--sn-stroke);
+          font-weight:600;
         }
-        .reaction-btn:hover {
-          box-shadow: 0 0 0 2px var(--ring, rgba(255,0,153,.25)) inset;
-        }
-        .reaction-btn:active { transform: translateY(1px); }
+        .rb-main:hover { box-shadow:0 0 0 2px var(--sn-ring) inset; border-color:#2a3754; }
 
-        .btn--ghost {
-          background: transparent;
-          color: var(--muted, #4b5563);
-          border-color: var(--stroke, rgba(0,0,0,.12));
+        .rb-tray {
+          position:absolute; bottom:42px; left:0;
+          display:flex; gap:6px; padding:6px;
+          background:#0f1626; border:1px solid var(--sn-stroke);
+          border-radius:999px; box-shadow:0 10px 30px rgba(0,0,0,.25);
+          opacity:0; visibility:hidden; transform: translateY(6px) scale(.98);
+          transition: opacity .15s ease, transform .15s ease, visibility .15s;
+          pointer-events:none;
         }
+        .rb-tray.open { opacity:1; visibility:visible; transform: translateY(0) scale(1); pointer-events:auto; }
 
-        .reaction-flyout {
-          position: absolute; left: 0; bottom: 44px;
-          display: inline-flex; gap: 8px; padding: 6px 8px; z-index: 30;
-          background: var(--surface, #fff);
-          border: 1px solid var(--stroke, rgba(0,0,0,.12));
-          border-radius: 12px;
-          box-shadow: 0 10px 30px rgba(0,0,0,.10),
-                      inset 0 1px 0 rgba(255,255,255,.6);
+        .rb-emoji {
+          width:36px; height:36px; border-radius:999px; border:1px solid var(--sn-stroke);
+          background:#121a2a; color:#fff; font-size:18px; line-height:34px;
         }
+        .rb-emoji:focus-visible { outline:2px solid var(--sn-accent2); outline-offset:2px; }
 
-        .reaction {
-          width: 36px; height: 36px;
-          display: inline-flex; align-items: center; justify-content: center;
-          border-radius: 12px; cursor: pointer;
-          background: var(--surface, #fff);
-          border: 1px solid var(--stroke, rgba(0,0,0,.12));
+        @media (prefers-reduced-motion: reduce) {
+          .rb-tray { transition: none; }
         }
       `}</style>
     </div>
