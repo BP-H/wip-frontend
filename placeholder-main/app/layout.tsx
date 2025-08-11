@@ -1,15 +1,12 @@
 // app/layout.tsx
 import type { Metadata, Viewport } from 'next';
-import './globals.css'; // keep if you have it; safe to leave
+import './globals.css'; // keep if you have it
 
 export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? 'https://wip-frontend.vercel.app'
   ),
-  title: {
-    default: 'superNova_2177',
-    template: '%s · superNova_2177',
-  },
+  title: { default: 'superNova_2177', template: '%s · superNova_2177' },
   description: 'Minimal social UI with a 3D portal hero.',
   icons: [{ rel: 'icon', url: '/icon.png' }],
 };
