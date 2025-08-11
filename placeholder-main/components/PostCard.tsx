@@ -13,50 +13,47 @@ const Mini3D = dynamic(() => import('./Mini3D'), {
   loading: () => <div className="min3d-skeleton" aria-label="Loading 3D…" />,
 });
 
-type AnyObj = Record<string, any>;
-
 export default function PostCard({
   post,
   onReact,
 }: {
-  post: Post;
+  post: Partial<Post>;
   onReact?: (prev: string | null, next: string) => void;
 }) {
-  const p = post as unknown as AnyObj; // tolerate partial data without exploding
   const handleReact = onReact ?? (() => {});
 
   // Safe, descriptive alt text
   const imgAlt =
-    (typeof p.text === 'string' && p.text.trim().slice(0, 80)) ||
-    (p.author?.name ? `${p.author.name}'s post image` : 'post image');
+    (typeof post.text === 'string' && post.text.trim().slice(0, 80)) ||
+    (post.author?.name ? `${post.author.name}'s post image` : 'post image');
 
   // Deterministic seed for 3D (varies per post but stable)
-  const threeSeed = String(p.id ?? Math.random());
+  const threeSeed = String(post.id ?? Math.random());
 
   return (
     <article className={styles.card}>
       <header className={styles.header}>
-        {p.author?.avatar ? (
+        {post.author?.avatar ? (
           // using <img> to avoid Next/Image config for now
-          <img className={styles.avatar} src={p.author.avatar} alt="" />
+          <img className={styles.avatar} src={post.author.avatar} alt="" />
         ) : (
           <div className={styles.avatar} aria-hidden />
         )}
         <div>
-          <div className={styles.name}>{p.author?.name ?? 'anon'}</div>
+          <div className={styles.name}>{post.author?.name ?? 'anon'}</div>
           <div className={styles.meta}>
-            @{p.author?.handle ?? 'unknown'} ·{' '}
-            {p.createdAt ? new Date(p.createdAt).toLocaleString() : 'just now'}
+            @{post.author?.handle ?? 'unknown'} ·{' '}
+            {post.createdAt ? new Date(post.createdAt).toLocaleString() : 'just now'}
           </div>
         </div>
       </header>
 
       <div className={styles.body}>
-        {p.text ? <p className={styles.text}>{p.text}</p> : null}
+        {post.text ? <p className={styles.text}>{post.text}</p> : null}
 
-        {p.type === 'image' && p.image ? (
+        {post.type === 'image' && post.image ? (
           <img
-            src={p.image}
+            src={post.image}
             alt={imgAlt}
             className={styles.media}
             loading="lazy"
@@ -64,13 +61,13 @@ export default function PostCard({
           />
         ) : null}
 
-        {p.type === 'three' ? <Mini3D seed={threeSeed} /> : null}
+        {post.type === 'three' ? <Mini3D seed={threeSeed} /> : null}
       </div>
 
       <footer className={styles.footer}>
         <ReactionBar
-          postId={String(post.id)}       // <- no “unknown as string”
-          counts={(p.reactions as AnyObj) ?? {}}
+          postId={post.id ? String(post.id) : undefined}
+          counts={post.reactions ?? {}}
           onChange={handleReact}
         />
         <button className="sn-btn" type="button">Comment</button>
