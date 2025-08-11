@@ -7,6 +7,16 @@ export const metadata: Metadata = {
   title: { default: 'superNova_2177', template: '%s · superNova_2177' },
   description: 'Minimal social UI with a 3D portal hero.',
   icons: [{ rel: 'icon', url: '/icon.png' }],
+  openGraph: {
+    title: 'superNova_2177',
+    description: 'Minimal social UI with a 3D portal hero.',
+    images: ['/opengraph-image.png'],
+  },
+  twitter: {
+    title: 'superNova_2177',
+    description: 'Minimal social UI with a 3D portal hero.',
+    images: ['/opengraph-image.png'],
+  },
 };
 
 export const viewport: Viewport = {
