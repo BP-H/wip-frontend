@@ -1,201 +1,313 @@
-// components/PortalHero.tsx (updated for Whiplash aesthetic)
+// components/PortalHero.tsx
 'use client';
-import React, { useRef, useState, useEffect } from 'react';
-import { Canvas } from '@react-three/fiber';
+
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import * as THREE from 'three';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { Float, Html, ContactShadows, OrbitControls } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
-import * as THREE from 'three';
 
-// ... (import shapes Rock, Cube, Torus similar to current, possibly with tweaked materials)
+/* ------------------------------------------
+   Helpers
+------------------------------------------ */
 
-export default function PortalHero({ logoSrc = '/icon.png' }) {
-  const headerRef = useRef<HTMLElement | null>(null);
-  const shellRef = useRef<HTMLDivElement>(null);
-  const [headerH, setHeaderH] = useState(64);
+type ShapeProps = { seed?: number; glass?: boolean };
+
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
+/* ------------------------------------------
+   Shapes (inline so builds never miss them)
+------------------------------------------ */
+
+function Rock({ seed = 0 }: ShapeProps) {
+  const ref = useRef<THREE.Mesh>(null!);
+  const speed = useMemo(() => 0.22 + ((seed % 100) / 150), [seed]);
+  useFrame((state, dt) => {
+    const t = state.clock.elapsedTime * speed + seed;
+    ref.current.rotation.x += 0.28 * dt;
+    ref.current.rotation.y += 0.22 * dt;
+    ref.current.position.y = Math.sin(t) * 0.5;
+    ref.current.position.x = Math.cos(t * 0.7) * 0.35;
+  });
+  return (
+    <mesh ref={ref}>
+      <icosahedronGeometry args={[0.7, 0]} />
+      <meshStandardMaterial color="#eef1f6" roughness={0.6} metalness={0.1} />
+    </mesh>
+  );
+}
+
+function Cube({ seed = 0 }: ShapeProps) {
+  const ref = useRef<THREE.Mesh>(null!);
+  const speed = useMemo(() => 0.12 + ((seed % 50) / 200), [seed]);
+  useFrame((state) => {
+    const t = state.clock.elapsedTime * speed + seed;
+    ref.current.rotation.x = Math.sin(t * 1.2) * 0.5;
+    ref.current.rotation.z = Math.cos(t) * 0.4;
+    ref.current.position.z = Math.sin(t * 0.9) * 0.6;
+  });
+  return (
+    <mesh ref={ref}>
+      <boxGeometry args={[0.9, 0.9, 0.9]} />
+      <meshStandardMaterial color="#ffffff" roughness={0.4} metalness={0.05} />
+    </mesh>
+  );
+}
+
+function Torus({ seed = 0, glass = false }: ShapeProps) {
+  const ref = useRef<THREE.Mesh>(null!);
+  const speed = useMemo(() => 0.25 + ((seed % 80) / 160), [seed]);
+  useFrame((state) => {
+    const t = state.clock.elapsedTime * speed + seed;
+    ref.current.rotation.y += 0.01 + Math.sin(t) * 0.01;
+    ref.current.position.x = Math.sin(t * 0.6) * 0.55;
+    ref.current.position.y = Math.cos(t * 0.6) * 0.4;
+  });
+  return (
+    <mesh ref={ref}>
+      {/* 64/12 segments (lighter than 120/18) for perf */}
+      <torusKnotGeometry args={[0.48, 0.16, 64, 12]} />
+      {glass ? (
+        <meshPhysicalMaterial
+          color="#f9fbff"
+          transmission={0.45}
+          thickness={2}
+          roughness={0.2}
+          metalness={0.1}
+        />
+      ) : (
+        <meshStandardMaterial color="#f3f6ff" roughness={0.25} metalness={0.08} />
+      )}
+    </mesh>
+  );
+}
+
+/* ------------------------------------------
+   PortalHero (not sticky—parent controls that)
+------------------------------------------ */
+
+export default function PortalHero({ logoSrc = '/icon.png', title = 'Enter universe — tap to interact' }: { logoSrc?: string; title?: string }) {
   const [scale, setScale] = useState(1);
+  const [kick, setKick] = useState(0);
   const [open, setOpen] = useState(false);
+
+  // Post-processing / material fallbacks
   const [disableFX, setDisableFX] = useState(false);
   const [noGlass, setNoGlass] = useState(false);
-  const [kick, setKick] = useState(0);
 
-  // Measure header height for sticky offset
-  useEffect(() => {
-    headerRef.current = document.querySelector('[data-app-header]');
-    const updateHeaderHeight = () => {
-      if (!headerRef.current) return;
-      setHeaderH(headerRef.current.getBoundingClientRect().height || 64);
-    };
-    updateHeaderHeight();
-    const ro = new ResizeObserver(updateHeaderHeight);
-    if (headerRef.current) ro.observe(headerRef.current);
-    window.addEventListener('resize', updateHeaderHeight);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener('resize', updateHeaderHeight);
-    };
-  }, []);
-
-  // Scroll effect: shrink portal and add energy kick on fast scroll
+  // Scroll-driven scale + “energy” kick
   useEffect(() => {
     let lastY = window.scrollY;
-    const onScroll = () => {
+    let running = true;
+
+    const calc = () => {
       const y = window.scrollY;
       const delta = Math.abs(y - lastY);
       lastY = y;
-      // Smoothly interpolate scale between 1 and 0.85 based on scroll position
-      const targetScale = 1 - Math.min(y / 900, 0.15);
-      setScale(prev => prev + (targetScale - prev) * 0.1); // interpolate for smoothness
-      // Energy kick on rapid scroll
-      setKick(k => Math.min(1, k + delta / 800));
+
+      setScale((s) => {
+        const target = clamp(1 - y / 900, 0.84, 1);
+        return s + (target - s) * 0.12; // ease toward target
+      });
+
+      setKick((k) => clamp(k + delta / 900, 0, 1));
+      if (running) requestAnimationFrame(calc);
     };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    // Decay the kick energy over time
-    const decayInterval = setInterval(() => setKick(k => k * 0.9), 100);
+
+    const decay = () => {
+      setKick((k) => k * 0.92);
+      if (running) requestAnimationFrame(decay);
+    };
+
+    requestAnimationFrame(calc);
+    requestAnimationFrame(decay);
+
     return () => {
-      window.removeEventListener('scroll', onScroll);
-      clearInterval(decayInterval);
+      running = false;
     };
   }, []);
 
-  // Lock body scroll when portal modal is open, and close on ESC
+  // Lock body scroll + close on ESC when modal open
   useEffect(() => {
     if (!open) return;
+    const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
     window.addEventListener('keydown', onKey);
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = prev;
       window.removeEventListener('keydown', onKey);
     };
   }, [open]);
 
-  // Sticky portal container styles – using CSS variables for theming
-  const portalStyle: React.CSSProperties = {
-    position: 'sticky',
-    top: `calc(${headerH}px + env(safe-area-inset-top, 0px))`,
-    zIndex: 100, // ensure below header (zIndex 1000) but above feed
-    isolation: 'isolate',
-    background: 'var(--panel, #fff)',      // dark panel if available, else white
-    borderBottom: '1px solid var(--stroke, #e5e7eb)',
+  // Style layers (inline so no CSS file required)
+  const cardStyle: React.CSSProperties = {
+    position: 'relative',
+    height: 220,
+    borderRadius: 12,
+    overflow: 'hidden',
+    border: '1px solid var(--stroke, #222a36)',
+    background: '#0a0b10',
+    boxShadow: '0 0 20px rgba(155,140,255,0.15)',
+    touchAction: 'manipulation',
   };
   const innerStyle: React.CSSProperties = {
     transform: `scale(${scale}) translateZ(0)`,
     transformOrigin: 'top center',
-    transition: 'transform 0.2s ease',
+    transition: 'transform .18s linear',
     willChange: 'transform',
   };
-  const cardStyle: React.CSSProperties = {
-    position: 'relative',
-    height: 220,
-    borderRadius: 12,              // slightly less rounded for a sharper look
-    overflow: 'hidden',
-    border: '1px solid var(--stroke, #e5e7eb)',
-    background: '#0f0f12',         // fallback dark background for contrast
-    boxShadow: `0 0 20px rgba(155,140,255,0.15)`,  // neon glow shadow
-    touchAction: 'manipulation',
-  };
-  // Dynamic glow layers using kick intensity
   const glowPink: React.CSSProperties = {
-    position: 'absolute', inset: -20, pointerEvents: 'none',
-    background: 'radial-gradient(60% 50% at 50% 35%, rgba(255,45,184,0.25) 0%, transparent 70%)',
-    opacity: 0.5 + kick * 0.4,
+    position: 'absolute',
+    inset: -20,
+    pointerEvents: 'none',
+    background:
+      'radial-gradient(60% 50% at 50% 35%, rgba(255,45,184,0.24) 0%, rgba(255,45,184,0.12) 25%, transparent 70%)',
+    opacity: 0.5 + kick * 0.35,
     filter: `blur(${6 + 12 * kick}px)`,
-    mixBlendMode: 'screen'
+    mixBlendMode: 'screen',
   };
   const glowPurple: React.CSSProperties = {
-    position: 'absolute', inset: -20, pointerEvents: 'none',
-    background: 'radial-gradient(55% 45% at 50% 30%, rgba(155,140,255,0.20) 0%, transparent 70%)',
-    opacity: 0.4 + kick * 0.3,
+    position: 'absolute',
+    inset: -20,
+    pointerEvents: 'none',
+    background:
+      'radial-gradient(55% 45% at 50% 30%, rgba(79,70,229,0.20) 0%, rgba(79,70,229,0.08) 25%, transparent 70%)',
+    opacity: 0.4 + kick * 0.25,
     filter: `blur(${8 + 10 * kick}px)`,
-    mixBlendMode: 'screen'
+    mixBlendMode: 'screen',
   };
   const glossAngle: React.CSSProperties = {
-    position: 'absolute', inset: 0, pointerEvents: 'none',
-    background: 'linear-gradient(130deg, rgba(155,140,255,0.12) 10%, rgba(255,255,255,0) 40%, rgba(255,45,184,0.15) 90%)',
-    mixBlendMode: 'screen'
+    position: 'absolute',
+    inset: 0,
+    pointerEvents: 'none',
+    background:
+      'linear-gradient(130deg, rgba(155,140,255,0.12) 10%, rgba(255,255,255,0) 40%, rgba(255,45,184,0.15) 90%)',
+    mixBlendMode: 'screen',
   };
 
   return (
-    <div ref={shellRef} style={portalStyle}>
-      {/* Scalable inner wrapper to preserve sticky */}
-      <div style={innerStyle}>
-        {/* Portal card container with neon gradients */}
-        <div style={cardStyle}>
-          <div aria-hidden style={glowPink} />
-          <div aria-hidden style={glowPurple} />
-          <div aria-hidden style={glossAngle} />
-          <Canvas 
-            camera={{ position: [0, 0, 3.2], fov: 50 }} 
-            dpr={[1, 1.5]} 
-            gl={{ antialias: false, powerPreference: 'high-performance' }}
-            onCreated={(state) => {
-              const webgl2 = !!state.gl.capabilities?.isWebGL2;
-              const isHiDPI = window.devicePixelRatio > 2;
-              setDisableFX(!webgl2);
-              setNoGlass(!webgl2 || isHiDPI);
-            }}>
-            <color attach="background" args={['#0a0b10']} /> {/* dark bg to enhance neon */}
-            <ambientLight intensity={0.8} />
-            <directionalLight position={[2, 3, 2]} intensity={0.8} />
-            {/* Floating shapes (possibly with emissive or brand color accents) */}
-            <Float speed={1} rotationIntensity={0.3} floatIntensity={0.8}>
-              <group position={[-1.2, 0.2, 0]}><Rock paused={!open} /></group>
-            </Float>
-            <Float speed={1.2} rotationIntensity={0.25} floatIntensity={0.7}>
-              <group position={[0.8, -0.2, 0.2]}><Cube paused={!open} /></group>
-            </Float>
-            <Float speed={0.9} rotationIntensity={0.4} floatIntensity={0.9}>
-              <group position={[0.2, 0.35, -0.3]}>
-                <Torus paused={!open} glass={!noGlass} /> 
-              </group>
-            </Float>
-            <ContactShadows position={[0, -0.85, 0]} opacity={0.25} scale={10} blur={1.6} far={2} />
-            {/* Bloom effect for glow */}
-            {!disableFX && (
-              <EffectComposer>
-                <Bloom intensity={0.6} luminanceThreshold={0.75} luminanceSmoothing={0.2} />
-              </EffectComposer>
-            )}
-            {/* Centered interactive button */}
-            <Html center>
-              <button onClick={() => setOpen(true)} className="enterPortalBtn" 
-                      aria-label="Open 3D portal">
-                Enter Universe – Tap to Explore
-              </button>
-            </Html>
-          </Canvas>
-        </div>
+    <div style={innerStyle}>
+      <div style={cardStyle}>
+        <div aria-hidden style={glowPink} />
+        <div aria-hidden style={glowPurple} />
+        <div aria-hidden style={glossAngle} />
+
+        <Canvas
+          camera={{ position: [0, 0, 3.2], fov: 50 }}
+          dpr={[1, 1.5]}                       // cap for perf
+          gl={{ antialias: false, powerPreference: 'high-performance' }}
+          onCreated={({ gl }) => {
+            // graceful degrade: if WebGL2 missing, disable bloom + glass
+            const webgl2 = (gl as any).capabilities?.isWebGL2 ?? false;
+            const hiDPI = window.devicePixelRatio > 2;
+            setDisableFX(!webgl2);
+            setNoGlass(!webgl2 || hiDPI);
+          }}
+        >
+          <color attach="background" args={['#0a0b10']} />
+          <ambientLight intensity={0.8} />
+          <directionalLight position={[2, 3, 2]} intensity={0.85} />
+
+          {/* trio of floaters */}
+          <Float speed={1} rotationIntensity={0.35} floatIntensity={0.8}>
+            <group position={[-1.2, 0.2, 0]}>
+              <Rock seed={11} />
+            </group>
+          </Float>
+          <Float speed={1.2} rotationIntensity={0.25} floatIntensity={0.7}>
+            <group position={[0.8, -0.2, 0.2]}>
+              <Cube seed={29} />
+            </group>
+          </Float>
+          <Float speed={0.9} rotationIntensity={0.4} floatIntensity={0.9}>
+            <group position={[0.2, 0.35, -0.3]}>
+              <Torus seed={47} glass={!noGlass} />
+            </group>
+          </Float>
+
+          <ContactShadows position={[0, -0.85, 0]} opacity={0.22} scale={10} blur={1.6} far={2} />
+
+          {!disableFX && (
+            <EffectComposer>
+              <Bloom intensity={0.55} luminanceThreshold={0.78} luminanceSmoothing={0.22} />
+            </EffectComposer>
+          )}
+
+          <Html center>
+            <button
+              onClick={() => setOpen(true)}
+              aria-label="Open 3D portal"
+              style={{
+                padding: '10px 14px',
+                borderRadius: 12,
+                border: '1px solid var(--stroke, #2a3140)',
+                background: 'rgba(255,255,255,0.9)',
+                color: '#0f172a',
+                cursor: 'pointer',
+                fontWeight: 800,
+                letterSpacing: 0.2,
+              }}
+            >
+              {title}
+            </button>
+          </Html>
+        </Canvas>
       </div>
 
-      {/* Fullscreen portal modal (opens on click) */}
+      {/* Modal */}
       {open && (
-        <div role="dialog" aria-modal="true" onClick={() => setOpen(false)}
-             style={{ position: 'fixed', inset: 0, zIndex: 999, background: 'rgba(10,11,16,0.9)' }}>
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setOpen(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 999, background: 'rgba(10,11,16,0.92)' }}
+        >
           <Canvas camera={{ position: [0, 0, 5], fov: 55 }} dpr={[1, 1.5]} gl={{ antialias: false }}>
             <color attach="background" args={['#0a0b10']} />
             <ambientLight intensity={0.85} />
             <directionalLight position={[3, 2, 2]} intensity={0.9} />
-            {/* Multiple floating shapes in modal for a full experience */}
+
             {Array.from({ length: 18 }).map((_, i) => {
-              const kind = (['rock','cube','torus'] as const)[i % 3];
-              const pos = new THREE.Vector3((Math.random()-0.5)*6, (Math.random()-0.5)*4, (Math.random()-0.5)*5);
-              return <group key={i} position={pos}>
-                {kind === 'rock' && <Rock seed={i} />}
-                {kind === 'cube' && <Cube seed={i} />}
-                {kind === 'torus' && <Torus seed={i} glass={!noGlass} />}
-              </group>;
+              const kind = (['rock', 'cube', 'torus'] as const)[i % 3];
+              const pos = new THREE.Vector3(
+                (Math.random() - 0.5) * 6,
+                (Math.random() - 0.5) * 4,
+                (Math.random() - 0.5) * 5
+              );
+              return (
+                <group key={i} position={pos}>
+                  {kind === 'rock' && <Rock seed={i} />}
+                  {kind === 'cube' && <Cube seed={i} />}
+                  {kind === 'torus' && <Torus seed={i} glass={!noGlass} />}
+                </group>
+              );
             })}
+
             <OrbitControls enablePan={false} />
             <ContactShadows position={[0, -1.2, 0]} opacity={0.2} scale={15} blur={2.2} far={3} />
+
             {!disableFX && (
               <EffectComposer>
                 <Bloom intensity={0.7} luminanceThreshold={0.8} luminanceSmoothing={0.25} />
               </EffectComposer>
             )}
-            {/* Modal close hint UI */}
+
             <Html center>
-              <div className="portalCloseHint">
-                <img src={logoSrc} alt="app logo" width={20} height={20} />
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '8px 12px',
+                  borderRadius: 12,
+                  border: '1px solid var(--stroke, #2a3140)',
+                  background: 'rgba(255,255,255,0.9)',
+                  color: '#0f172a',
+                  fontWeight: 800,
+                }}
+              >
+                <img alt="app" src={logoSrc} width={20} height={20} />
                 Tap anywhere to close
               </div>
             </Html>
