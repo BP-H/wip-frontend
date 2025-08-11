@@ -32,7 +32,10 @@ export default function ReactionBar({
   const merged = useMemo<ReactionCounts>(() => {
     const safe: ReactionCounts = { ...DEFAULTS };
     for (const [k, v] of Object.entries(counts || {})) {
-      safe[k] = Number.isFinite(v) ? Number(v) : 0;
+      // Coerce incoming values to numbers before validating; otherwise
+      // numeric strings like "3" would be treated as NaN and zeroed out.
+      const n = Number(v);
+      safe[k] = Number.isFinite(n) ? n : 0;
     }
     return safe;
   }, [counts]);
