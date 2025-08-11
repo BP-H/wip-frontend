@@ -10,8 +10,8 @@ export type Props = {
   postId?: string;
   /** Map of emoji -> count. Missing keys default to 0. */
   counts?: ReactionCounts;
-  /** Notifies parent of a change: previous selection (or null) and new selection */
-  onChange?: (prev: string | null, next: string) => void;
+  /** Notifies parent of a change: previous selection (or null) and new selection (or null) */
+  onChange?: (prev: string | null, next: string | null) => void;
   /** Optional className so parent can style/position */
   className?: string;
 };
@@ -43,9 +43,10 @@ export default function ReactionBar({
 
   const handleClick = (next: string) => {
     setSelected(prev => {
-      try { onChange?.(prev, next); } catch { /* swallow */ }
-      // toggle: clicking the same reaction keeps it selected (no unlike yet)
-      return next;
+      const result = prev === next ? null : next;
+      try { onChange?.(prev, result); } catch { /* swallow */ }
+      // toggle: clicking again clears the selection
+      return result;
     });
   };
 
