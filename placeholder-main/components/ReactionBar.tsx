@@ -42,7 +42,12 @@ export default function ReactionBar({
 
   const handleClick = (next: string) => {
     setSelected(prev => {
-      try { onChange?.(prev, next); } catch { /* swallow */ }
+      try {
+        onChange?.(prev, next);
+      } catch (err) {
+        // Surface errors from the onChange handler instead of silently swallowing them
+        console.error(err);
+      }
       // toggle: clicking the same reaction keeps it selected (no unlike yet)
       return next;
     });
